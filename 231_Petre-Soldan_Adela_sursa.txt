@@ -1,0 +1,2655 @@
+--creare tabele:
+create table FURNIZOR (
+    cod_furnizor int constraint cod_furnizor_pk primary key,
+    nume varchar2(40) constraint nume_furnizor_nn NOT NULL,
+    adresa_mail_repr varchar2(40),
+    constraint nume_furnizor_uq unique(nume)
+);
+
+create table CONCURS (
+    cod_concurs int constraint cod_concurs_pk primary key,
+    data_concurs date default sysdate constraint data_concurs_nn NOT NULL,
+    subiect varchar2(50) constraint subiect_nn NOT NULL,
+    durata number(2) constraint durata_concurs NOT NULL,
+    nr_intrebari number(2) default 20 constraint nr_intrebari_nn NOT NULL,
+    taxa_inscriere number(2) constraint taxa_inscriere_nn NOT NULL,
+    constraint durata_concurs_ck check(durata <= 20),
+    constraint subiect_uq unique(subiect)
+);
+
+create table BENEFICIAR (
+    cod_beneficiar int,
+    nume varchar2(25) constraint nume_beneficiar_nn NOT NULL,
+    prenume varchar2(25) constraint prenume_beneficiar_nn NOT NULL,
+    telefon varchar2(13), 
+    CNP number(13) constraint cnp_beneficiar_nn NOT NULL constraint cnp_beneficiar_uq unique,
+    nume_utilizator varchar2(50) constraint nume_utilizator_nn NOT NULL,
+    cont_premium number(1) default 0 constraint cont_premium_nn NOT NULL,
+    data_autentificare date default sysdate constraint data_autentificare_nn NOT NULL,
+    puncte_fidelitate number(10) default 0,
+    constraint puncte_fidelitate_ck check(puncte_fidelitate <= 10000),
+    constraint nume_utilizator_uq unique(nume_utilizator),
+    constraint cod_beneficiar_pk primary key(cod_beneficiar)
+);
+
+create table ARTICOL (
+    cod_articol int,
+    pret number(10, 2) constraint pret_articol_nn NOT NULL,
+    nume varchar2(40) constraint nume_articol_nn NOT NULL,
+    puncte_fidelitate number(2),
+    constraint puncte_fidelitate_articol_ck check(puncte_fidelitate <= 30),
+    constraint nume_articol_uq unique(nume),
+    constraint cod_articol_pk primary key(cod_articol)
+);
+create table PACHET_PROMOTIONAL (
+    cod_articol int constraint cod_pachet_pk primary key references ARTICOL(cod_articol)
+);
+
+
+create table PRODUS (
+    cod_articol int constraint cod_produs_pk primary key references ARTICOL(cod_articol),
+    cod_furnizor int,
+    luni_garantie number(2) default 12,
+    constraint produs_furnizor_fk foreign key(cod_furnizor) references FURNIZOR(cod_furnizor)
+);
+
+create table PRODUS_in_PACHET (
+    cod_produs int,
+    cod_pachet int,
+    constraint produs_in_pachet_pk primary key(cod_produs, cod_pachet),
+    constraint produs_in_pachet_produs_fk foreign key(cod_produs) references PRODUS(cod_articol),
+    constraint produs_in_pachet_pachet_fk foreign key(cod_pachet) references PACHET_PROMOTIONAL(cod_articol)
+);
+
+create table PARTICIPA (
+    cod_concurs int,
+    cod_beneficiar int,
+    punctaj number(3) constraint punctaj_nn NOT NULL,
+    constraint participa_pk primary key(cod_concurs, cod_beneficiar),
+    constraint participa_concurs_fk foreign key(cod_concurs) references CONCURS(cod_concurs),
+    constraint participa_beneficiar_fk foreign key(cod_beneficiar) references BENEFICIAR(cod_beneficiar)
+);
+
+create table PREMIU (
+    cod_premiu int,
+    cod_concurs int,
+    cod_articol int,
+    punctaj_minim number(3) constraint punctaj_minim_nn NOT NULL,
+    suma number(6, 2) default 0,
+    constraint premiu_pk primary key(cod_premiu, cod_concurs),
+    constraint premiu_concurs_fk foreign key(cod_concurs) references CONCURS(cod_concurs),
+    constraint premiu_produs_fk foreign key(cod_articol) references PRODUS(cod_articol)
+);
+
+create table ANGAJAT (
+	cod_angajat int,
+	nume varchar2(25) constraint nume_angajat_nn NOT NULL,
+	prenume varchar2(25) constraint prenume_angajat_nn NOT NULL,
+	salariu number(7) default 3500,
+	telefon varchar2(15),
+    data_angajare date default sysdate constraint data_angajare_nn NOT NULL,
+	constraint cod_angajat_pk primary key(cod_angajat)
+);
+
+create table SCENARIST (
+	cod_angajat int constraint cod_scenarist_pk primary key references ANGAJAT(cod_angajat),
+	zi_libera varchar2(10)
+);
+
+create table ADMINISTRATOR (
+	cod_angajat int constraint cod_administrator_pk primary key references ANGAJAT(cod_angajat)
+);
+
+create table CURIER (
+	cod_angajat int constraint cod_curier_pk primary key references ANGAJAT(cod_angajat),
+	categorie_permis varchar2(2) constraint categorie_permis_nn NOT NULL
+);
+
+create table RECLAMA (
+    cod_reclama int constraint cod_reclama_pk primary key,
+    cod_articol int,
+    cod_angajat int constraint cod_reclama_angajat_nn NOT NULL,
+    durata number(3) constraint durata_reclama_nn NOT NULL,
+    cost_total number(9, 2) constraint cost_total_nn NOT NULL,
+    constraint reclama_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol),
+    constraint reclama_scenarist_fk foreign key(cod_angajat) references SCENARIST(cod_angajat)
+);
+
+create table SEDIU (
+    cod_sediu int constraint cod_sediu_pk primary key,
+    cod_administrator int constraint sediu_administrator_nn NOT NULL,
+    nume varchar2(30) constraint nume_sediu_nn NOT NULL,
+    adresa varchar2(60) constraint adresa_sediu_nn NOT NULL,
+    suprafata number(10) default 100000 constraint suprafata_sediu_nn NOT NULL,
+    constraint nume_sediu_uq unique(nume),
+    constraint sediu_administrator_fk foreign key(cod_administrator) references ADMINISTRATOR(cod_angajat)
+);
+create table ARTICOL_in_SEDIU (
+    cod_sediu int,
+    cod_articol int,
+    cantitate number(8) constraint sediu_cantitate_nn NOT NULL,
+    pret number(10, 2) constraint sediu_pret_nn NOT NULL,
+    constraint articol_in_sediu_pk primary key(cod_sediu, cod_articol),
+    constraint articol_in_sediu_sediu_fk foreign key(cod_sediu) references SEDIU(cod_sediu),
+    constraint articol_in_sediu_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol)
+);
+create table DETALII_TRANZACTIE (
+    cod_detalii_tranzactie int constraint cod_detalii_tranzactie_pk primary key,
+    cod_beneficiar int,
+    data_tranzactie date default sysdate constraint data_tranzactie_nn NOT NULL,
+    cost_total number(10, 2) constraint cost_tranzactie_nn NOT NULL,
+    puncte_fidelitate_castigate number(8) default 0 constraint tranzactie_puncte_fidelitate_castigate_nn NOT NULL,
+    puncte_fidelitate_folosite number(8)  default 0 constraint tranzactie_puncte_fidelitate_folosite_nn NOT NULL,
+    suma_platita_in_puncte number(10, 2) default 0 constraint tranzactie_plata_puncte_nn NOT NULL,
+    suma_platita_card number(10, 2) default 0 constraint tranzactie_plata_card_nn NOT NULL,
+    suma_platita_numerar number(10, 2) default 0 constraint tranzactie_plata_numerar_nn NOT NULL,
+    constraint tranzactie_beneficiar_fk foreign key(cod_beneficiar) references BENEFICIAR(cod_beneficiar)
+);
+
+create table VANZARE_FIZICA (
+    cod_vanzare_fizica int constraint cod_vanzare_pk primary key,
+    cod_sediu constraint vanzare_sediu_nn NOT NULL,
+    cod_detalii_tranzactie constraint vanzare_detalii_tranzactie_nn NOT NULL,
+    constraint vanzare_detalii_fk foreign key(cod_detalii_tranzactie) references DETALII_TRANZACTIE(cod_detalii_tranzactie),
+    constraint vanzare_sediu_fk foreign key(cod_sediu) references SEDIU(cod_sediu)
+);
+
+create table ARTICOL_in_VANZARE (
+    cod_vanzare_fizica int,
+    cod_articol int,
+    cantitate number(3) constraint vanzare_cantitate_nn NOT NULL,
+    constraint articol_in_vanzare_pk primary key(cod_vanzare_fizica, cod_articol),
+    constraint articol_in_vanzare_vanzare_fk foreign key(cod_vanzare_fizica) references VANZARE_FIZICA(cod_vanzare_fizica),
+    constraint articol_in_vanzare_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol)
+);
+
+create table COMANDA (
+    cod_comanda int constraint cod_comanda_pk primary key,
+    cod_detalii_tranzactie constraint comanda_detalii_tranzactie_nn NOT NULL,
+    status_comanda varchar2(20) default 'se proceseaza',
+    tip_comanda varchar2(30) default 'comanda generala' constraint tip_comanda_nn NOT NULL,
+    plata_la_livrare number(1) constraint comanda_plata_la_livrare_nn NOT NULL,
+    constraint comanda_detalii_fk foreign key(cod_detalii_tranzactie) references DETALII_TRANZACTIE(cod_detalii_tranzactie)
+);
+
+create table COLET (
+    cod_colet int,
+    cod_comanda int,
+    cod_angajat int,
+    cod_sediu int,
+    greutate number(3) constraint greutate_nn NOT NULL,
+    data_livrare date,
+    status_colet varchar2(30) default 'se proceseaza' constraint status_colet_nn NOT NULL,
+    constraint greutate_ck check(greutate > 0),
+    constraint colet_comanda_fk foreign key(cod_comanda) references COMANDA(cod_comanda),
+    constraint colet_angajat_fk foreign key(cod_angajat) references CURIER(cod_angajat),
+    constraint colet_sediu_fk foreign key(cod_sediu) references SEDIU(cod_sediu),
+    constraint colet_pk primary key(cod_colet, cod_comanda)
+);
+
+create table RECENZIE (
+    cod_recenzie int constraint cod_recenzie_pk primary key,
+    cod_articol int constraint cod_recenzie_articol_nn NOT NULL,
+    cod_beneficiar int constraint cod_recenzie_beneficiar_nn NOT NULL,
+    data_recenzie date default sysdate,
+    nota number(2) constraint nota_recenzie_nn NOT NULL,
+    comentariu varchar2(250),
+    constraint recenzie_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol),
+    constraint recenzie_beneficiar_fk foreign key(cod_beneficiar) references BENEFICIAR(cod_beneficiar),
+    constraint nota_recenzie_ck check(nota <= 10)
+);
+
+create table ARTICOL_in_COLET (
+    cod_articol int,
+    cod_colet int,
+    cod_comanda int, 
+    cantitate number(3) default 1 constraint canitate_articol_colet_nn NOT NULL,
+    constraint cantitate_articol_colet_ck check(cantitate >= 0),
+    constraint articol_in_colet_pk primary key(cod_articol, cod_colet, cod_comanda),
+    constraint articol_in_colet_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol),
+    constraint articol_in_colet_colet_fk foreign key(cod_colet, cod_comanda) REFERENCES COLET(cod_colet, cod_comanda)
+); 
+
+create table COS(
+    cod_articol int,
+    cod_beneficiar int,
+    cantitate number(3) default 1 constraint canitate_produs_cos_nn NOT NULL,
+    data_adaugare date default sysdate,
+    bifat number(1) default 1,
+    constraint cantitate_cos_produs_ck check(cantitate > 0),
+    constraint adauga_in_cos_pk primary key(cod_articol, cod_beneficiar),
+    constraint cos_articol_fk foreign key(cod_articol) references ARTICOL(cod_articol),
+    constraint cos_beneficiar_fk foreign key(cod_beneficiar) references BENEFICIAR(cod_beneficiar)
+); 
+
+----posibile tabele
+create table PRIMIRE_PREMIU(
+    cod_primire_premiu int constraint cod_primire_premiu_pk primary key,
+    cod_sediu int,
+    cod_angajat int,
+    cod_premiu int constraint primire_premiu_premiu_nn NOT NULL,
+    cod_concurs int constraint primire_premiu_concurs_nn NOT NULL,
+    stare varchar2(30) constraint primire_premiu_stare_nn NOT NULL,
+    constraint primire_premiu_sediu foreign key(cod_sediu) references SEDIU(cod_sediu),
+    constraint primire_premiu_curier foreign key(cod_angajat) references CURIER(cod_angajat),
+    constraint primire_premiu_premiu foreign key(cod_premiu, cod_concurs) references PREMIU(cod_premiu, cod_concurs)
+);
+
+drop table primire_premiu;
+--CREARE SECVENTE====================================================================================================
+create sequence seq_furnizor start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_concurs start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_beneficiar start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_articol start with 100 increment by 1 maxvalue 1000 nocycle nocache;
+create sequence seq_premiu start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_angajat start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_reclama start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_sediu start with 100 increment by 10 maxvalue 1000 nocycle nocache;
+create sequence seq_detalii_tranzactie start with 100 increment by 1 maxvalue 10000 nocycle nocache;
+create sequence seq_vanzare_fizica start with 100 increment by 1 maxvalue 10000 nocycle nocache;
+create sequence seq_comanda start with 100 increment by 1 maxvalue 10000 nocycle nocache;
+create sequence seq_colet start with 100 increment by 1 maxvalue 10000 nocycle nocache;
+create sequence seq_recenzie start with 100 increment by 1 maxvalue 1000 nocycle nocache;
+
+--INSERARE TABELE:
+
+--FURNIZOR
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Electronice high quality', 'popescu.ioan@gmail.com');
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Elecrtic party', 'ionescu.maria@yahoo.com');
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Electronics++', 'marinescu.mirela@gmail.com');
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'IT Direct', 'paul.enescu45@gmail.com');
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Ultra circuite', NULL);
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Best Techno', 'maria.dobrescu@gmail.com');
+insert into furnizor (cod_furnizor, nume, adresa_mail_repr)values(seq_furnizor.nextval, 'Furnizor Electronice', 'andrei.matei@gmail.com');
+select * from furnizor;
+
+--CONCURS
+insert into concurs (cod_concurs, data_concurs, subiect, durata, nr_intrebari, taxa_inscriere)values(seq_concurs.nextval, to_date('12-04-2023', 'dd-mm-yyyy'), 'Biologie', 10, 15, 20);
+insert into concurs (cod_concurs, data_concurs, subiect, durata, nr_intrebari, taxa_inscriere)values(seq_concurs.nextval, to_date('18-04-2023', 'dd-mm-yyyy'), 'Matematica', 20, 20, 30);
+insert into concurs (cod_concurs, data_concurs, subiect, durata, nr_intrebari, taxa_inscriere)values(seq_concurs.nextval, to_date('27-02-2023', 'dd-mm-yyyy'), 'Literatura', 10, 16, 10);
+insert into concurs (cod_concurs, data_concurs, subiect, durata, nr_intrebari, taxa_inscriere)values(seq_concurs.nextval, to_date('14-11-2022', 'dd-mm-yyyy'), 'Diverse', 7, 8, 10);
+insert into concurs (cod_concurs, data_concurs, subiect, durata, nr_intrebari, taxa_inscriere)values(seq_concurs.nextval, to_date('15-01-2023', 'dd-mm-yyyy'), 'Vulcani', 13, 15, 25);
+select * from concurs;
+
+--BENEFICIAR
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Andronic', 'Marcel', '+400733456753', 5001210208170,  'marcel233', 1, to_date('12-05-2021', 'dd-mm-yyyy'), 100);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Suditu', 'Mara', '+400745839485', 2990310209242,  'marra4', 0, to_date('25-04-2021', 'dd-mm-yyyy'), 500);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Lupu', 'Eugen', '+400748201839', 5010410205807, 'dvd34_a', 1, to_date('30-05-2021', 'dd-mm-yyyy'), 800);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Lupu', 'Eugen', '+400745678542', 1990915204669, 'eugen_123', 0,to_date('12-04-2021', 'dd-mm-yyyy'), 0);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Alexandru', 'Miruna', '+400706543678', 6001130203816, 'mira__12', 0, to_date('12-04-2021', 'dd-mm-yyyy'), 900);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Munteanu', 'Ana', '+400733456784', 6010413100131, 'mnt_ana', 0, to_date('02-05-2022', 'dd-mm-yyyy'), 0);
+insert into beneficiar (cod_beneficiar, nume, prenume, telefon, CNP, nume_utilizator, cont_premium, data_autentificare, puncte_fidelitate)values(seq_beneficiar.nextval, 'Maria', 'Ana', '+400733456784', 6010413123013, 'm_ana', 0, to_date('02-05-2022', 'dd-mm-yyyy'), 0);
+select * from beneficiar;
+
+--ARTICOL
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 100, 'Casti wireless', 12);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 120, 'Bec ultra', 24);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 300, 'Incarcator telefon', 13);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 400, 'Lanterna', 18);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 100, 'Frigider', 19);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 80, 'Aspirator robot', 25);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 10, 'Fier de calcat', 0);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 100, 'Uscator de par',28);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 120, 'Uscator de par Julie Pro', 15);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 90, 'Telefon', 10);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 80, 'Laptop', 0);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 70,'Tableta', 3);
+
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 1000, 'Pachet Pro', 28);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 800, 'Pachet electro', 28);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 1000, 'Pachet super', 29);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 5000, 'Pachet techno', 30);
+insert into articol (cod_articol, pret, nume, puncte_fidelitate)values(seq_articol.nextval, 8000, 'Pachet all',  30);
+select * from articol;
+
+--PRODUS
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(100, NULL, 12);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(101, 100, 18);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(102, 100, 0);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(103, 110, 18);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(104, 120, 24);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(105, 120, 18);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(106, 130, 24);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(107, 130, 18);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(108, 140, 18);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(109, 150, 15);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(110, 150, 6);
+insert into produs (cod_articol, cod_furnizor, luni_garantie)values(111, 150, 3);
+select * from produs;
+
+--PACHET
+insert into pachet_promotional (cod_articol)values(112);
+insert into pachet_promotional (cod_articol)values(113);
+insert into pachet_promotional (cod_articol)values(114);
+insert into pachet_promotional (cod_articol)values(115);
+insert into pachet_promotional (cod_articol)values(116);
+select* from pachet_promotional;
+
+--PRODUS_IN_PACHET
+insert into produs_in_pachet(cod_produs, cod_pachet)values(100, 112);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(101, 112);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(102, 112);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(103, 113);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(104, 113);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(105, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(106, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(107, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(108, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(109, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(100, 114);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(102, 115);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(105, 115);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(104, 116);
+insert into produs_in_pachet(cod_produs, cod_pachet)values(108, 116);
+select * from produs_in_pachet;
+
+--PREMIU
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 100, 103, 60, 20);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 100, 100, 70, 30);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 100, 108, 90, 40);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 110, NULL, 80, 30);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 110, 103, 90, 35);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 120, NULL, 70, 210);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 120, 102, 75, 20);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 130, 101, 80, 0);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 130, 105, 99, 30);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 140, 111, 100, 0);
+insert into premiu (cod_premiu, cod_concurs, cod_articol, punctaj_minim, suma)values(seq_premiu.nextval, 140, 104, 50, 10);
+select* from premiu;
+
+--PARTICIPA
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 110, 50);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 100, 66);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 130, 74);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 140, 95);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 150, 20);
+
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (110, 100, 92);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (110, 110, 94);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (110, 130, 88);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (110, 140, 50);
+
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (120, 100, 97);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (120, 110, 73);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (120, 140, 60);
+
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (130, 100, 99);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (130, 110, 90);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (130, 130, 79);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (130, 140, 73);
+
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (140, 100, 99);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (140, 110, 45);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (140, 130, 74);
+insert into participa (cod_concurs, cod_beneficiar, punctaj) values (140, 140, 100);
+select * from participa;
+
+--ANGAJAT
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Lopataru', 'Alexandra', 3500, '+400758465748', to_date('15-08-2021', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Cujbescu', 'Marius', 3600, '+400745678954', to_date('12-10-2021', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Serban', 'Alina', 3700, '+400767584957', to_date('12-09-2022', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Mihai', 'Costin', 3650, '+400778965435', to_date('09-09-2021', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Lazar', 'Simon', 3700, '+400789657453', to_date('05-09-2021', 'dd-mm-yyyy'));
+
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Moldovan', 'Andreea', 5000, '+400709876547', to_date('12-04-2021', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Oprea', 'Pavel', 5500, '+400798765467', to_date('12-01-2022', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Dumitrescu', 'Bianca', 5600, '+400785768594', to_date('18-06-2022', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Dinu', 'Dobrin', 5400, '+400734567895', to_date('19-10-2021', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Cristea', 'Cristina', 5400, NULL, to_date('28-11-2021', 'dd-mm-yyyy'));
+
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Todorescu', 'Simon', 6000, '+400734567845', to_date('12-09-2023', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Anontescu', 'Briana', 7000, '+400787657893', to_date('12-11-2023', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Cutas', 'Mirel', 5600, '+400797865467', to_date('12-11-2023', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Chiristigiu', 'Madalina', 5700, '+400785958594', to_date('12-02-2023', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Costetchi', 'Catalina', 5700, '+400734569595', to_date('28-05-2022', 'dd-mm-yyyy'));
+insert into angajat (cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (seq_angajat.nextval, 'Ciubeica', 'Cristina', 6500, NULL, to_date('29-04-2024', 'dd-mm-yyyy'));
+
+select* from angajat;
+
+--SCENARIST
+insert into scenarist (cod_angajat, zi_libera) values (100, 'miercuri');
+insert into scenarist (cod_angajat, zi_libera) values (110, 'luni');
+insert into scenarist (cod_angajat, zi_libera) values (120, 'luni');
+insert into scenarist (cod_angajat, zi_libera) values (130, 'joi');
+insert into scenarist (cod_angajat, zi_libera) values (140, 'vineri');
+select * from scenarist;
+
+--ADMINISTRATOR
+insert into administrator (cod_angajat) values (150);
+insert into administrator (cod_angajat) values (160);
+insert into administrator (cod_angajat) values (170);
+insert into administrator (cod_angajat) values (180);
+insert into administrator (cod_angajat) values (190);
+select* from administrator;
+
+--CURIER
+insert into curier (cod_angajat, categorie_permis) values (200, 'A2');
+insert into curier (cod_angajat, categorie_permis) values (210, 'B');
+insert into curier (cod_angajat, categorie_permis) values (220, 'C');
+insert into curier (cod_angajat, categorie_permis) values (230, 'CE');
+insert into curier (cod_angajat, categorie_permis) values (240, 'C');
+insert into curier (cod_angajat, categorie_permis) values (250, 'A1');
+select* from curier;
+
+--RECLAMA
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 100, 140, 30, 2150);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 100, 130, 40, 2250);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, NULL, 130, 40, 1400);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 101, 110, 50, 1400);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 101, 130, 60, 2250);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 101, 140, 10, 3000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 102, 110, 20, 3000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 102, 140, 30, 2250);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 102, 130, 35, 2250);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 103, 120, 35, 1220);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 103, 110, 35, 1400);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 105, 120, 30, 1220);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 105, 140, 45, 1400);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 106, 130, 24, 1220);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 106, 120, 45, 3000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 107, 110, 30, 1220);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 109, 140, 30, 500);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 110, 130, 45, 4000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 111, 110, 55, 5000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 110, 120, 30, 4030);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, NULL, 120, 42, 2000);
+insert into reclama (cod_reclama, cod_articol, cod_angajat, durata, cost_total) values (seq_reclama.nextval, 108, 130, 25, 600);
+select * from reclama;
+
+--SEDIU
+insert into sediu (cod_sediu, cod_administrator, nume, adresa, suprafata) values (seq_sediu.nextval, 150, 'Electric center', 'Bucuresti Sud', 10000);
+insert into sediu (cod_sediu, cod_administrator, nume, adresa, suprafata) values (seq_sediu.nextval, 160, 'Cable power', 'Centru Bucuresti City', 12000);
+insert into sediu (cod_sediu, cod_administrator, nume, adresa, suprafata) values (seq_sediu.nextval, 170, 'Atacul tehnologiei', 'Ploiesti Periferie', 5000);
+insert into sediu (cod_sediu, cod_administrator, nume, adresa, suprafata) values (seq_sediu.nextval, 170, 'IT Party', 'Buzau Cartier Dorobanti', 6000);
+insert into sediu (cod_sediu, cod_administrator, nume, adresa, suprafata) values (seq_sediu.nextval, 190, 'ELECTRO LIGHT MAIN', 'Bucuresti Strada Pacii', 12000);
+select* from sediu;
+
+--ARTICOL_IN_SEDIU
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 100, 60, 105.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 101, 70, 115.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 102, 80, 290.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 103, 50, 410.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 104, 90, 395.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 107, 60, 107.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 108, 100, 132.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 109, 70, 425.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 110, 55, 885.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 111, 45, 1390.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 112, 30, 980.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 113, 25, 800.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 114, 15, 1020.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 115, 10, 5100.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (100, 116, 5, 8100.00);
+
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 100, 65, 100.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 101, 75, 110.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 102, 85, 295.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 103, 55, 420.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 104, 85, 400.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 105, 1, 90.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 107, 65, 110.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 108, 105, 130.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 109, 75, 420.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 110, 60, 880.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 111, 50, 1400.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 112, 28, 950.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 113, 18, 790.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 114, 8, 1050.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 115, 5, 5200.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (110, 116, 3, 8200.00);
+
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 100, 55, 110.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 101, 65, 120.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 102, 75, 285.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 103, 50, 425.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 104, 85, 405.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 107, 70, 105.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 108, 95, 130.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 110, 65, 875.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 111, 55, 1420.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 112, 26, 970.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 113, 15, 810.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 114, 7, 1020.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 115, 4, 5000.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (120, 116, 2, 8050.00);
+
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 100, 70, 100.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 102, 90, 295.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 103, 60, 430.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 104, 100, 390.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 106, 150, 27.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 107, 80, 108.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 108, 120, 135.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 109, 90, 430.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 110, 70, 880.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 113, 12, 805.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 114, 5, 1015.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 115, 3, 5050.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (130, 116, 2, 8050.00);
+
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 100, 55, 95.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 101, 75, 110.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 102, 85, 290.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 103, 65, 425.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 108, 110, 130.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 109, 75, 420.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 110, 60, 875.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 111, 50, 1420.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 112, 20, 950.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 113, 10, 810.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 114, 5, 1010.00);
+insert into articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) values (140, 115, 4, 5100.00);
+select * from articol_in_sediu;
+
+--DETALII_TRANZACTIE
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 120, to_date('01-03-2024', 'dd-mm-yyyy'), 550, 25, 0, 0, 550, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 110, to_date('02-01-2024', 'dd-mm-yyyy'), 820, 22, 0, 0, 820, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 100, to_date('03-08-2024', 'dd-mm-yyyy'), 940, 24, 55, 20, 0, 920); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 100, to_date('04-11-2024', 'dd-mm-yyyy'), 570, 27, 0, 0, 570, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 110, to_date('06-12-2024', 'dd-mm-yyyy'), 1060, 26, 30, 10, 0, 1050); 
+
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 140, to_date('05-01-2023', 'dd-mm-yyyy'), 800, 20, 25, 10, 0, 790); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 110, to_date('07-02-2023', 'dd-mm-yyyy'), 930, 23, 0, 0, 930, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 110, to_date('08-03-2023', 'dd-mm-yyyy'), 250, 25, 0, 0, 250, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 100, to_date('09-04-2023', 'dd-mm-yyyy'), 280, 28, 0, 0, 280, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 130, to_date('10-05-2023', 'dd-mm-yyyy'), 1020, 22, 0, 0, 1020, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 100, to_date('11-06-2023', 'dd-mm-yyyy'), 240, 24, 0, 0, 100, 140); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 130, to_date('10-07-2022', 'dd-mm-yyyy'), 1060, 26, 10, 10, 0, 1050); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 100, to_date('13-08-2023', 'dd-mm-yyyy'), 220, 22, 0, 0, 220, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 130, to_date('14-10-2023', 'dd-mm-yyyy'), 950, 25, 0, 0, 950, 0); 
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) values (seq_detalii_tranzactie.nextval, 140, to_date('15-11-2023', 'dd-mm-yyyy'), 280, 28, 0, 0, 280, 0); 
+
+select * from detalii_tranzactie;
+
+--COMANDA
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) values (seq_comanda.nextval, 100, 'nelivrata', 0, 'generala');
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) values (seq_comanda.nextval, 101, 'nelivrata', 0, 'generala');
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) values (seq_comanda.nextval, 103, 'nelivrata', 0, 'generala');
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) values (seq_comanda.nextval, 102, 'livrata', 1, 'generala');
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) values (seq_comanda.nextval, 104, 'livrata', 1, 'generala');
+select * from comanda;
+
+--COLET
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 100, 200, 100, 200, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 100, 200, 110, 100, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 100, 210, 120, 300, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 101, NULL, NULL, 350, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 101, 220, 110, 400, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 102, NULL, 110, 210, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 102, 230, 120, 310, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 102, NULL, 130, 280, 'nelivrat', NULL);
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 103, 230, 130, 210, 'livrat', to_date('01-01-2024', 'dd-mm-yyyy'));
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 103, 240, 100, 200, 'livrat', to_date('01-03-2024', 'dd-mm-yyyy'));
+insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) values (seq_colet.nextval, 104, 240, 120, 500, 'livrat', to_date('01-08-2023', 'dd-mm-yyyy'));
+select * from colet;
+
+--VANZARE FIZICA
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 100, 105);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 100, 106);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 110, 107);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 110, 108);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 120, 109);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 130, 110);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 130, 111);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 130, 112);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 130, 113);
+insert into vanzare_fizica(cod_vanzare_fizica, cod_sediu, cod_detalii_tranzactie) values (seq_vanzare_fizica.nextval, 130, 114);
+select * from vanzare_fizica;
+
+--COS
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(100, 100, 1, to_date('01-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(101, 100, 2, to_date('02-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(102, 100, 3, to_date('03-01-2024', 'dd-mm-yyyy'), 0);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(104, 110, 1, to_date('04-02-2024', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(105, 110, 1, to_date('05-03-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(106, 110, 1, to_date('06-01-2023', 'dd-mm-yyyy'), 0);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(113, 120, 1, to_date('07-04-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(114, 120, 2, to_date('08-05-2023', 'dd-mm-yyyy'), 0);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(115, 120, 3, to_date('09-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(102, 130, 4, to_date('10-06-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(101, 130, 1, to_date('11-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(104, 130, 1, to_date('12-07-2024', 'dd-mm-yyyy'), 0);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(106, 140, 1, to_date('13-08-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(109, 140, 1, to_date('14-09-2024', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(105, 140, 2, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(103, 140, 4, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(108, 140, 2, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(113, 140, 4, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(103, 130, 4, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(108, 130, 2, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+insert into cos(cod_articol, cod_beneficiar, cantitate, data_adaugare, bifat) values(113, 130, 4, to_date('15-01-2023', 'dd-mm-yyyy'), 1);
+
+select * from cos;
+
+--RECENZIE
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 100, 100, to_date('07-08-2023', 'dd-mm-yyyy'), 8, 'recomand tuturor');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 100, 100, to_date('09-08-2023', 'dd-mm-yyyy'), 10, 'mai eficient decat ma asteptam');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 101, 110, to_date('10-08-2023', 'dd-mm-yyyy'), 10, 'recomand tuturor');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 113, 110, to_date('06-08-2023', 'dd-mm-yyyy'), 7, 'recomand tuturor');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 103, 120, to_date('07-05-2023', 'dd-mm-yyyy'), 4, 'nu recomand');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 104, 120, to_date('09-08-2023', 'dd-mm-yyyy'), 6, 'poate fi imbunatatit');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 105, 140, to_date('07-03-2023', 'dd-mm-yyyy'), 8, 'recomand cu caldura');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 114, 140, to_date('03-08-2023', 'dd-mm-yyyy'), 9, 'de inalta calitate');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 109, 140, to_date('07-02-2023', 'dd-mm-yyyy'), 7, 'destul de bun');
+insert into recenzie (cod_recenzie, cod_articol, cod_beneficiar, data_recenzie, nota, comentariu) values (seq_recenzie.nextval, 110, 140, to_date('04-08-2023', 'dd-mm-yyyy'), 3, 'nu recomand deloc');
+select * from recenzie;
+
+--ARTICOL_IN_COLET
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (100, 100, 100, 3);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (102, 100, 100, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (104, 100, 100, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (115, 101, 100, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (103, 101, 100, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (106, 102, 100, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (107, 102, 100, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (104, 103, 101, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (109, 103, 101, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (113, 104, 101, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (101, 104, 101, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (112, 104, 101, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (105, 105, 102, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (114, 105, 102, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (115, 105, 102, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (108, 106, 102, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (110, 107, 102, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (107,108, 103, 3);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (103, 109, 103, 4);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (114, 109, 103, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (100, 110, 104, 1);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (112, 110, 104, 2);
+insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) values (116, 110, 104, 2);
+select * from articol_in_colet;
+
+--ARTICOL_IN_VANZARE
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (100, 100, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (100, 101, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (100, 102, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (101, 101, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (101, 104, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (101,108, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (102, 109, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (102, 111, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (102, 112, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (103,113, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (103,116, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (103,112, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (104, 114, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (104, 115, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 116, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 112, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 114, 2);
+--insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 102, 2);
+--insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 116, 2);
+--insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (105, 109, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (106, 114, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (106, 115, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (106, 116, 2);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (107, 112, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (107, 113, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (107, 107, 1 );
+--insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (107, 104, 1 );
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (108, 107, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (108, 104, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (108, 108, 1);
+insert into articol_in_vanzare(cod_vanzare_fizica, cod_articol, cantitate) values (109, 102, 1);
+select * from articol_in_vanzare;
+
+
+
+
+
+
+--EXERCITIUL 6==========================================================================================================================
+--Sa se creeze o procedura care are ca parametru de intrare codul unui sediu.
+--In acest sediu a ajuns un trasnport cu produsele cu codurile 101, 102, 105 in cantitatile 100, 120, 200. 
+--Cresteti stocul. Daca nu exista o inregistrate cu un articol puneti pretul universal, din tabela articol.
+--Dupa accea, pentru o imagine de ansamblu, afisati pentru fiecare furnzior numele, produsele sale si cantitatea totala din fiecare produs, plus cantitatea in care se gaseste in fiecare sediu (inclusiv 0).
+
+CREATE OR REPLACE PROCEDURE exercitiul6 (v_cod_sediu IN sediu.cod_sediu%TYPE) 
+    IS
+        TYPE transport_record is RECORD (cod_articol articol.cod_articol%TYPE, cantitate articol_in_sediu.cantitate%TYPE);
+        TYPE tablou_indexat_transporturi IS TABLE OF transport_record INDEX BY PLS_INTEGER;
+        t_transporturi tablou_indexat_transporturi;
+        v_pret articol_in_sediu.cantitate%TYPE;
+        
+        c_maxim_furnizori CONSTANT NUMBER := 1000;
+        TYPE vector_furnizori IS VARRAY(c_maxim_furnizori) OF furnizor%ROWTYPE;
+        t_furnizori vector_furnizori := vector_furnizori();
+        
+        TYPE produs_record is RECORD (cod_articol articol.cod_articol%TYPE, nume articol.nume%TYPE);
+        TYPE tablou_imbricat_produse IS TABLE OF produs_record;
+        t_produse tablou_imbricat_produse := tablou_imbricat_produse();
+        
+        TYPE sediu_record is RECORD (
+            cod_sediu sediu.cod_sediu%TYPE, 
+            nume sediu.nume%TYPE, 
+            cantitate articol_in_sediu.cantitate%TYPE);
+        TYPE tablou_indexat_sedii IS TABLE OF sediu_record INDEX BY BINARY_INTEGER;
+        t_sedii tablou_indexat_sedii;
+        v_cantitate_totala int;
+        
+    BEGIN
+    
+        t_transporturi(1) := transport_record(101, 100);
+        t_transporturi(2) := transport_record(102, 120);
+        t_transporturi(3) := transport_record(105, 200);
+        
+        FOR i IN t_transporturi.FIRST..t_transporturi.LAST LOOP --iteram transporturile si le inseram increstem stocurile
+            
+            UPDATE articol_in_sediu
+            SET cantitate = cantitate + t_transporturi(i).cantitate
+            WHERE cod_sediu = v_cod_sediu AND cod_articol = t_transporturi(i).cod_articol;
+            
+            IF SQL%ROWCOUNT = 0 THEN --daca nu a updatat nicio linie inseamna ca produsul nu exista deloc in sediu si trebuie adaugata o inserare
+                SELECT pret INTO v_pret FROM articol WHERE cod_articol = t_transporturi(i).cod_articol; --pretul il luam din tabela articol, adica pretul universal
+                INSERT INTO articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) 
+                VALUES (v_cod_sediu, t_transporturi(i).cod_articol, t_transporturi(i).cantitate, v_pret);
+            END IF;
+            
+        END LOOP;
+        
+        FOR i in (SELECT * FROM furnizor) LOOP --retinem in vector toate datele din tabela furnizor (nume si cod, mai e si o adresa de mail dar nu ne trebuie)
+           t_furnizori.EXTEND;
+           t_furnizori(t_furnizori.LAST) := i;
+        END LOOP;
+        
+        FOR i IN t_furnizori.FIRST..t_furnizori.LAST LOOP --luam produsele furnizate
+        
+            SELECT p.cod_articol, nume 
+            BULK COLLECT INTO t_produse
+            FROM produs p, articol a
+            WHERE cod_furnizor = t_furnizori(i).cod_furnizor AND p.cod_articol = a.cod_articol;
+            
+            IF t_produse.COUNT = 0 THEN DBMS_OUTPUT.PUT_LINE('Furnizorul ' || t_furnizori(i).nume || ' nu furnizeaza produse');
+            ELSE 
+                DBMS_OUTPUT.PUT_LINE('Furnizorul ' || t_furnizori(i).nume || ' ne vinde ' || t_produse.COUNT || ' produs(e):');
+                
+                FOR j IN t_produse.FIRST..t_produse.LAST LOOP
+                   
+                    v_cantitate_totala := 0;
+                    DBMS_OUTPUT.PUT_LINE('      ' || t_produse(j).nume || ', cantitati: ');
+                    
+                    SELECT s.cod_sediu, s.nume, NVL(ais.cantitate, 0) AS cantitate 
+                    BULK COLLECT INTO t_sedii --pt un produs aflam cantitatea din fiecare sediu
+                    FROM sediu s, articol_in_sediu ais
+                    WHERE cod_articol(+) = t_produse(j).cod_articol AND s.cod_sediu = ais.cod_sediu(+)
+                    ORDER BY s.nume;
+                    
+                    FOR k IN t_sedii.FIRST..t_sedii.LAST LOOP
+                        DBMS_OUTPUT.PUT_LINE('              sediul' || t_sedii(k).nume || ': ' || t_sedii(k).cantitate || ' bucati');
+                        v_cantitate_totala := v_cantitate_totala + t_sedii(k).cantitate;
+                    END LOOP;
+                    
+                    --t_sedii.DELETE; --nu trebuie neaparat sters
+                    DBMS_OUTPUT.PUT_LINE('            Cantitatea totala: ' || v_cantitate_totala || ' bucati');
+                    
+                END LOOP;
+                
+                DBMS_OUTPUT.PUT_LINE('==================================================');
+                --t_produse.DELETE;
+                
+            END IF;
+           
+        END LOOP;
+    END exercitiul6;
+/
+
+--articolele din sediul 100 inainte de executare:
+select * from articol_in_sediu where cod_sediu = 100;
+
+BEGIN
+    exercitiul6(100);
+END;
+/
+
+--articolele din sediul 100 dupa executare:
+select * from articol_in_sediu where cod_sediu = 100;
+rollback;
+
+
+
+
+
+
+--7. Formula?i în  limbaj  natural o problem? pe care s? o rezolva?i folosind un subprogram stocat 
+--independent care s? utilizeze 2 tipuri diferite de cursoare studiate, unul dintre acestea fiind cursor 
+--parametrizat, dependent de cel?lalt cursor. Apela?i subprogramul. 
+
+
+--afisati pt fiecare colet nelivrat si care trebuie sa plece din sediul 'Cable Power' pachetele promotionale cu produsele pe care le contin aceste pachete,
+--pentru a ajuta angajatii sa le impacheteze
+--sa se afiseze si curierul care il va duce, daca este cunoscut
+
+CREATE OR REPLACE PROCEDURE exercitiul7 (v_nume_sediu IN sediu.nume%TYPE DEFAULT 'CABLE POWER')  IS
+    TYPE refcursor IS REF CURSOR;
+    v_cursor refcursor;
+    
+    CURSOR c_principal IS --ciclu cursor care selecteaza pentru un colet codul si curierul (daca exista); ia doar coletele care respecta cerinta
+        SELECT c.cod_colet cod_colet, c.cod_comanda cod_comanda, NVL(a.cod_angajat, -1) AS cod_curier,
+        NVL(CONCAT(a.nume, ' ' || a.prenume), 'Curierul nu a fost inca asignat') AS nume_curier
+        FROM sediu s, colet c, angajat a 
+        WHERE c.cod_sediu = s.cod_sediu AND v_nume_sediu = UPPER(s.nume) AND UPPER(c.status_colet) = 'NELIVRAT'
+        AND a.cod_angajat = c.cod_angajat(+); --left join pentru cazul in care curierul are cod_angajat NULL
+        
+    CURSOR c_secundar (v_cod_colet colet.cod_colet%TYPE, v_cod_comanda colet.cod_comanda%TYPE) IS --cursor clasic parametrizat cu un ref cursor in el;pentru o comanda afla cate produse din pachete promotionale are
+        SELECT a.cod_articol as cod, a.nume as nume, aic.cantitate as cantitate,
+            CURSOR(SELECT pip.cod_produs cod_produs, a2.nume nume2 -- expresie cursor care pt un pachet afla ce produse are
+                   FROM produs_in_pachet pip, articol a2
+                   WHERE pip.cod_pachet = a.cod_articol AND a2.cod_articol = pip.cod_produs)
+        FROM articol_in_colet aic, pachet_promotional p, articol a
+        WHERE aic.cod_colet = v_cod_colet and aic.cod_comanda = v_cod_comanda and aic.cod_articol = p.cod_articol 
+            AND a.cod_articol = p.cod_articol;
+    
+    v_detalii_curier varchar2(100);
+    v_cod_articol articol.cod_articol%TYPE;
+    v_nume_articol articol.nume%TYPE;
+    v_nume_produs articol.nume%TYPE;
+    v_cantitate articol_in_colet.cantitate%TYPE;
+    v_cod_produs produs.cod_articol%TYPE;
+    
+    BEGIN
+        FOR i IN c_principal LOOP
+        
+            EXIT WHEN c_principal%NOTFOUND;
+            v_detalii_curier := ' (';
+            
+            IF i.cod_curier = -1 
+            THEN v_detalii_curier := v_detalii_curier || 'al carui curier nu a fost inca asignat)';
+            ELSE v_detalii_curier := v_detalii_curier || 'care va fi livrat de curierul ' || i.nume_curier || ' cod ' || i.cod_curier || ')';
+            END IF;
+            
+            DBMS_OUTPUT.PUT_LINE('Coletul' || v_detalii_curier || ' cu codul ' || i.cod_colet || ' din comanda ' || i.cod_comanda || ',are pachetele:');
+            
+            OPEN c_secundar(i.cod_colet, i.cod_comanda);
+                LOOP
+                    
+                    FETCH c_secundar INTO v_cod_articol, v_nume_articol, v_cantitate, v_cursor;
+                    EXIT WHEN c_secundar%NOTFOUND;
+                    DBMS_OUTPUT.PUT_LINE('         cod: ' || v_cod_articol || ', nume: ' || v_nume_articol || ', cantitate: ' || v_cantitate || ', produse componente');
+                    
+                    LOOP
+                        FETCH v_cursor INTO v_cod_produs, v_nume_produs; 
+                            EXIT WHEN v_cursor%NOTFOUND;
+                            DBMS_OUTPUT.PUT_LINE('               ' || v_nume_produs || ', cod:' || v_cod_produs); 
+                    END LOOP;
+              
+                END LOOP;
+            CLOSE c_secundar;
+            
+        END LOOP;
+
+    END exercitiul7;
+/
+
+
+BEGIN
+    exercitiul7();
+END;
+/
+
+
+
+
+
+
+
+
+
+
+
+--Exerciitul 8==========================================================================================================
+--8.Formula?i în  limbaj  natural o problem? pe care s? o rezolva?i folosind un subprogram stocat 
+--independent de tip func?ie care s? utilizeze într-o singur? comand? SQL 3 dintre tabelele definite. 
+--Defini?i minim 2 excep?ii proprii. Apela?i subprogramul astfel încât s? eviden?ia?i toate cazurile 
+--definite ?i tratate. 
+
+--Se da ca parametru pentru functie codul unui articol.
+--Daca nu exista codul in baza de date sa se arunce exceptia COD_ARTICOL_INEXISTENT.
+--Sa se implementeze 3 operatii:
+--    1-afisam furnizorul si cate produse mai furnizeaza acesta
+--    2-afisam media numarului de participanti din concursurile din 2023 care au ca premiu produsul. se afiseaza si cate astfel de concursuri sunt, si profitul
+--total obtinut din plata taxei de inscriere pentru participanti. 
+--    3-aflam daca articolul are costul din reclame mai mare decat media
+--Exceptii:
+--Daca se introduce un cod de articol necunoscut se va arunca exceptia 'COD_ARTICOL_INVALID'
+--Daca operatia aleasa nu e disponibila pentru unul din cele 2 tipuri de articol, se va arunca exceptia 'OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI'. Operatiile 1 si 2 nu sunt disponibile pentru pachete.
+--Daca utilizatorul introduce o comanda gresita se va arunca exceptia 'COMANDA_INVALIDA'
+--Daca articolul e de tip produs dar totusi nu are furnizor, se va arunca exceptia 'PRODUS_NU_ARE_FURNIZOR'
+--Functia va returna un sir de caractere explicand rezultatul obtinut.
+--Pentru operatia 2 daca nu se gasesc concursuri se va arunca 'NU_EXISTA_CONCURSURI'
+
+CREATE OR REPLACE FUNCTION exercitiul8 (v_cod_articol IN articol.cod_articol%TYPE DEFAULT 100, v_operatie IN number)
+RETURN varchar2
+IS
+    COD_ARTICOL_INVALID exception;
+    COMANDA_INVALIDA exception;
+    OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI exception;
+    PRODUS_NU_ARE_FURNIZOR exception;
+    NU_EXISTA_CONCURSURI exception;
+    
+    v_concluzie varchar2(100);
+    v_temporar_cod_articol articol.cod_articol%TYPE;
+    v_tip_articol varchar2(15);
+    v_nume_furnizor furnizor.nume%TYPE;
+    v_cod_furnizor furnizor.cod_furnizor%TYPE;
+    v_nr_produse_furnizate number(6);
+    v_nr_concursuri number(5);
+    v_nr_participanti number(6, 2);
+    v_profit number(8);
+    v_cost_articol number(8);
+    v_medie_reclame number(8);
+    
+BEGIN
+
+    v_concluzie := 'Nu a fost efectuata operatia';
+    BEGIN --bloc pentru a verifica daca exista codul introdus
+        SELECT cod_articol INTO v_temporar_cod_articol FROM articol WHERE cod_articol = v_cod_articol;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN 
+            RAISE COD_ARTICOL_INVALID;
+    END;
+    
+    --aflam tipul articolului: produs sau pachet promotional
+    v_tip_articol := 'produs';
+    BEGIN
+        SELECT cod_articol INTO v_temporar_cod_articol FROM produs WHERE cod_articol = v_cod_articol;
+    
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN 
+            v_tip_articol := 'pachet';
+    END;
+    
+    IF v_operatie = 1 THEN
+        --verificam daca articolul este produs, altfel nu are furnizor.
+        IF v_tip_articol = 'produs' THEN 
+        
+            SELECT cod_furnizor INTO v_cod_furnizor
+            FROM produs WHERE cod_articol = v_cod_articol;
+            
+            IF v_cod_furnizor IS NULL 
+            THEN RAISE PRODUS_NU_ARE_FURNIZOR;
+            ELSE
+                SELECT f.nume, (COUNT(*) - 1) 
+                INTO v_nume_furnizor, v_nr_produse_furnizate --COUNT - 1 pt ca un produs furnizat e parametrul functiei
+                FROM furnizor f, produs p 
+                WHERE f.cod_furnizor = v_cod_furnizor AND p.cod_furnizor = f.cod_furnizor
+                GROUP BY f.nume;
+                
+                RETURN 'Produsul e furnizat de ' || v_nume_furnizor || ' care are codul ' || v_cod_furnizor || ' si mai furnizeaza alte ' || v_nr_produse_furnizate || ' produse';
+            END IF;
+            RETURN v_concluzie;
+        ELSE
+            RAISE OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI;
+        END IF;
+        
+    ELSIF v_operatie = 2 THEN 
+        IF v_tip_articol = 'produs' THEN 
+        
+            SELECT COUNT(*) nr_concursuri, AVG(nr_participari), SUM(profit_concurs) 
+            INTO v_nr_concursuri, v_nr_participanti, v_profit
+            FROM( --luam detalii despre toate concursurile care au printre premii produsul: cod, nr participanti, profit
+                SELECT c.cod_concurs cod_concurs, COUNT(pp.cod_beneficiar) nr_participari,
+                    (SELECT COUNT(*) * c.taxa_inscriere --doar beneficiarii fara cont_premium platesc taxa, deci numaram cati sunt
+                    FROM participa pp2, beneficiar b
+                    WHERE pp2.cod_concurs = c.cod_concurs AND b.cod_beneficiar = pp2.cod_beneficiar 
+                    AND b.cont_premium = 0) AS profit_concurs
+                FROM premiu p, concurs c, participa pp
+                WHERE p.cod_articol = v_cod_articol AND p.cod_concurs = c.cod_concurs AND pp.cod_concurs = c.cod_concurs  
+                    AND TO_CHAR(c.data_concurs, 'YYYY') = 2023
+                GROUP BY c.cod_concurs, c.taxa_inscriere
+            );
+        
+            IF v_nr_concursuri = 0 THEN RAISE NU_EXISTA_CONCURSURI;
+            ELSE RETURN 'Articolul de tip ' || v_tip_articol || ' apare ca premiu in ' || v_nr_concursuri || ' concurs(uri) din 2023, la care au participant in medie ' || v_nr_participanti || ' persoane.
+                Profitul total al concursurilor este ' || v_profit || ' RON.';
+            END IF;
+            
+        ELSE 
+            RAISE OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI;
+        END IF;
+        
+    ELSIF v_operatie = 3 THEN
+        --aflam daca articolul are costul din reclame mai mare decat media
+        SELECT AVG(cost_per_reclama)
+        INTO v_medie_reclame FROM(
+            SELECT a.cod_articol, SUM(NVL(r.cost_total, 0)) cost_per_reclama --costul reclamelor per articol
+            FROM articol a, reclama r
+            WHERE a.cod_articol = r.cod_articol(+)
+            GROUP BY a.cod_articol);
+            
+        DBMS_OUTPUT.PUT_LINE('Media costului reclamelor per articol este ' || v_medie_reclame);
+        --calculam costul din reclame pt articol:
+        SELECT NVL(SUM(r.cost_total), 0)
+        INTO v_cost_articol
+        FROM articol a, reclama r
+        WHERE a.cod_articol = r.cod_articol;
+        
+        DBMS_OUTPUT.PUT_LINE('Costul reclamelor pentru articolul ' || v_cod_articol || ' este ' || v_cost_articol);
+        IF v_cost_articol > v_medie_reclame 
+        THEN RETURN 'Articolul are costul din reclame mai mare decat  media';
+        ELSE RETURN 'Articolul NU are costul din reclame mai mare decat media';
+        END IF;
+
+    ELSE
+        RAISE COMANDA_INVALIDA;
+    END IF;
+    RETURN v_concluzie;
+    
+EXCEPTION
+    WHEN COD_ARTICOL_INVALID THEN
+        RETURN 'Exceptie: Codul introdus nu se alfa in baza de date';
+    WHEN COMANDA_INVALIDA THEN
+        RETURN 'Exceptie: Comanda aleasa nu este valida';
+    WHEN OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI THEN
+        RETURN 'Exceptie: Operatie invalida pentru tipul articolului';
+    WHEN PRODUS_NU_ARE_FURNIZOR THEN
+        RETURN 'Exceptie: Produsl nu are furnizor';
+    WHEN NU_EXISTA_CONCURSURI THEN
+        RETURN 'Exceptie: Nu s au gasit concursuri';
+    WHEN OTHERS THEN
+        RETURN 'Exceptie necunoscuta';
+END exercitiul8;
+/
+    
+BEGIN
+--EXCEPTII:
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(100, 8)); --comanda_invalida
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(500, 3)); --cod_articol_invalid
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(114, 1)); --operatie invalida pt tipul articolului (un pachet nu are furnizor)
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(100, 1)); --produs_nu are_furnizor
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(106, 2)); --nu_exista_concursuri
+END;
+/
+
+--produsul 100 nu are furnizor:
+select * from produs where cod_articol = 100;
+--codul 500 nu exista pt articole:
+select cod_articol from articol;
+--produsul 106 nu apare printre premiile vreunui concurs:
+select * from concurs c, premiu p, produs pp 
+where c.cod_concurs = p.cod_concurs and p.cod_articol = pp.cod_articol and pp.cod_articol = 106;
+BEGIN
+    --RULARE CORECTA PT CAZUL 1:
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(110, 1)); 
+END;
+/
+
+BEGIN
+    --RULARE CORECTA PT CAZUL 2:
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(100, 2)); 
+END;
+/
+BEGIN
+    --RULARE CORECTA PT CAZUL 3:
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul8(114, 3)); 
+END;
+/
+
+
+
+
+
+--Exerciitul 9==================================================================================================================================================
+--Formula?i în  limbaj  natural o problem? pe care s? o rezolva?i folosind un subprogram stocat 
+--independent de tip procedur? care s? utilizeze într-o singur? comand? SQL 5 dintre tabelele 
+--definite. Trata?i toate excep?iile care pot ap?rea, incluzând excep?iile NO_DATA_FOUND ?i 
+--TOO_MANY_ROWS. Apela?i subprogramul astfel încât s? eviden?ia?i toate cazurile tratate.
+
+--pentru numele si prenumele unui beneficiar sa se afiseze toate produsele cumparate, cantitatea, si sa scrie la fiecare daca se mai aplica garanti
+--Afisati de asemenea separat pentru comenzi si vanzari pretul total platit de beneficiar din comenzi/vanzari cand a facut tranzactiile si cel pe care l ar fi platit acum(preturile articolelor se mai pot schimba).
+--Afisati si punctele de fidelitate pe care le ar fi avut acum daca nu ar fi folosit din ele (aici se calculeaza impreuna pt toate produsele cumparate).
+--daca beneficiarul nu a cumparat nimic nici fizic nici online sa se arunce exceptia NU_EXISTA_TRANZACTII (folosesc NO_DATA_FOUND intr-un bloc interior de unde arunc NU_EXISTA_TRANZACTII)
+--daca sunt 2 persoane cu acelasi nume sa se arunce exceptia PERSOANA_CU_ACELASI_NUME (folosesc TOO MANY ROWS intr-un bloc interior)
+
+CREATE OR REPLACE PROCEDURE exercitiul9(v_nume beneficiar.nume%TYPE, v_prenume beneficiar.prenume%TYPE)
+IS
+        PERSOANA_CU_ACELASI_NUME exception;
+        NU_EXISTA_TRANZACTII exception;
+        v_cod_beneficiar beneficiar.cod_beneficiar%TYPE;
+        v_temporar_cod_beneficiar beneficiar.cod_beneficiar%TYPE;
+        TYPE date_articole_record is RECORD 
+            (tip_tranzactie varchar2(30), 
+            tip_articol varchar2(30), 
+            puncte_fidelitate articol.puncte_fidelitate%TYPE, 
+            cod_articol articol.cod_articol%TYPE, 
+            nume articol.nume%TYPE, 
+            pret_la_cumparare articol.pret%TYPE, 
+            data_cumparare date, 
+            cantitate number(8));
+            
+        TYPE tablou_imbricat_articole IS TABLE OF date_articole_record;
+        t_articole tablou_imbricat_articole := tablou_imbricat_articole();
+        t_articole_temporar tablou_imbricat_articole := tablou_imbricat_articole(); --vom retine aici datele despre toate produsele cumparate (din vanzari si comenzi)
+       
+        v_temporar_nr number(6);
+        v_suma_totala_comenzi number(11) := 0; -- suma de cost total al tranzactiilor legate de comenzi
+        v_suma_totala_vanzari number(11) := 0; -- suma de cost total al tranzactiilor legate de vanzari
+        v_suma_totala_comenzi_atunci number(11) := 0;
+        v_suma_totala_vanzari_atunci number(11) := 0;
+        v_detalii_garantie varchar2(150);
+        v_luni_garantie produs.luni_garantie%TYPE;
+        v_data_expirare_garantie date;
+        v_nr_total_puncte_fidelitate number(11) := 0; --adunam pt fiecare articol cumparat punctele de fidelitate
+        v_cod_temporar int;
+        
+    BEGIN
+        --verificam daca mai exista alta persoana cu acelasi nume si prenume
+        BEGIN
+            SELECT cod_beneficiar INTO v_cod_beneficiar FROM beneficiar WHERE prenume = v_prenume AND nume = v_nume;
+        EXCEPTION
+            WHEN TOO_MANY_ROWS 
+                THEN RAISE PERSOANA_CU_ACELASI_NUME;
+        END;
+        
+        --verificam daca persoana a facut cumparaturi
+        BEGIN
+            SELECT cod_beneficiar INTO v_temporar_nr FROM detalii_tranzactie WHERE v_cod_beneficiar = cod_beneficiar;
+        EXCEPTION
+            WHEN NO_DATA_FOUND 
+                THEN RAISE NU_EXISTA_TRANZACTII;
+            WHEN TOO_MANY_ROWS THEN NULL; --se va arunca too many rows daca avem tranzactii. oprim exceptia.
+        END;
+        
+        --calculam datele pentru comenzi:
+        SELECT 'comanda' tip_tranzactie, 
+            CASE WHEN pp.cod_articol IS NULL THEN 'produs'
+                ELSE 'pachet'
+            END AS tip_articol,
+            a.puncte_fidelitate puncte_fidelitate, a.cod_articol cod_articol, a.nume nume, 
+            a.pret pret_la_cumparare, cc.data_livrare data_cumparare, aic.cantitate cantitate
+        BULK COLLECT INTO t_articole
+        FROM detalii_tranzactie dt, comanda c, colet cc, articol_in_colet aic, articol a, pachet_promotional pp
+        WHERE dt.cod_beneficiar = v_cod_beneficiar AND dt.cod_detalii_tranzactie = c.cod_detalii_tranzactie
+            AND c.cod_comanda = cc.cod_comanda
+            AND aic.cod_colet = cc.cod_colet AND aic.cod_comanda = cc.cod_comanda AND aic.cod_articol = a.cod_articol
+            AND a.cod_articol = pp.cod_articol(+);       
+        
+        --datele pentru vanzari fizice:
+        SELECT 'vanzare fizica' tip_tranzactie,
+            CASE WHEN a.cod_articol IN (SELECT cod_articol FROM produs) THEN 'produs'
+                ELSE 'pachet'
+            END AS tip_articol,
+            a.puncte_fidelitate puncte_fidelitate, a.cod_articol cod_articol, a.nume nume, ais.pret pret_la_cumparare, 
+            dt.data_tranzactie data_cumparare, aiv.cantitate cantitate
+        BULK COLLECT INTO t_articole_temporar
+        FROM detalii_tranzactie dt, vanzare_fizica vf, articol_in_vanzare aiv, articol a, articol_in_sediu ais
+        WHERE dt.cod_beneficiar = v_cod_beneficiar AND dt.cod_detalii_tranzactie = vf.cod_detalii_tranzactie 
+            AND vf.cod_vanzare_fizica = aiv.cod_vanzare_fizica 
+            AND aiv.cod_articol = a.cod_articol AND vf.cod_sediu = ais.cod_sediu AND ais.cod_articol = a.cod_articol;
+        
+        t_articole := t_articole MULTISET UNION t_articole_temporar; --adaugam in t_articole si datele vanzarilor_fizice. nu puteam direct pentru ca bulk collect ar fi sters comenzile.
+        
+        DBMS_OUTPUT.PUT_LINE('COMENZI:');
+        FOR i IN t_articole.FIRST..t_articole.LAST LOOP
+            
+            IF i > t_articole.FIRST AND t_articole(i - 1).tip_tranzactie = 'comanda' AND t_articole(i).tip_tranzactie = 'vanzare fizica' --cand am gasit primul articol dintr-o vanzare fizica
+            THEN DBMS_OUTPUT.PUT_LINE('VANZARI:');
+            END IF;
+            
+            IF t_articole(i).tip_tranzactie = 'comanda'
+            THEN v_suma_totala_comenzi := v_suma_totala_comenzi + (t_articole(i).pret_la_cumparare * t_articole(i).cantitate); --calculam cele 2 sume totale pe care le ar plati cu preturile de acum
+            ELSE v_suma_totala_vanzari := v_suma_totala_vanzari + (t_articole(i).pret_la_cumparare * t_articole(i).cantitate);
+            END IF;
+            
+            v_nr_total_puncte_fidelitate := v_nr_total_puncte_fidelitate + (t_articole(i).puncte_fidelitate * t_articole(i).cantitate);
+            
+            IF t_articole(i).tip_articol = 'pachet' THEN --daca articolul curent e pachet trebuie sa aflam toate produsele din el
+                DBMS_OUTPUT.PUT_LINE('Din pachetul: ' || t_articole(i).cod_articol || ': ');
+                FOR j IN 
+                (SELECT p.luni_garantie, a.nume, a.cod_articol
+                FROM produs p, produs_in_pachet pip, articol a
+                WHERE t_articole(i).cod_articol = pip.cod_pachet AND pip.cod_produs = p.cod_articol AND a.cod_articol = p.cod_articol) 
+                LOOP
+                    
+                    v_detalii_garantie := '';
+                    
+                    IF t_articole(i).data_cumparare IS NULL --daca nu avem data cumpararii inseamna ca e dintr o vanzare fizica unde clientul nu a platit prin contul aplicatiei
+                    THEN v_detalii_garantie := 'produs nelivrat inca, garantia de ' || j.luni_garantie || ' luni inca nu se aplica ';
+                    ELSE 
+                        v_data_expirare_garantie := ADD_MONTHS(t_articole(i).data_cumparare, j.luni_garantie); --calculam cand expira garantia
+                        
+                        IF v_data_expirare_garantie < sysdate 
+                        THEN v_detalii_garantie := 'garantie expirata';
+                        ELSE v_detalii_garantie := 'garantia expira pe ' || TO_CHAR(v_data_expirare_garantie, 'dd-mm-yyyy');
+                        END IF;
+                        
+                    END IF;
+                    DBMS_OUTPUT.PUT_LINE('        cod: ' || j.cod_articol ||  ' nume: ' || j.nume || ', cantitate ' || t_articole(i).cantitate || ', detalii garantie: ' || v_detalii_garantie);
+          
+                END LOOP;
+                 
+            ELSE --daca e de tip produs il afisam direct
+                
+		SELECT luni_garantie INTO v_luni_garantie FROM produs WHERE cod_articol = t_articole(i).cod_articol;
+                v_detalii_garantie := '';
+                
+                IF t_articole(i).data_cumparare IS NULL 
+                THEN v_detalii_garantie := 'produs nelivrat inca, garantia de ' || v_luni_garantie || ' luni inca nu se aplica ';
+                ELSE 
+                    v_data_expirare_garantie := ADD_MONTHS(t_articole(i).data_cumparare, v_luni_garantie);
+                    
+                    IF v_data_expirare_garantie < sysdate 
+                    THEN v_detalii_garantie := 'garantie expirata';
+                    ELSE v_detalii_garantie := 'garantia expira pe ' || TO_CHAR(v_data_expirare_garantie, 'dd-mm-yyyy');
+                    END IF;
+                    
+                END IF;
+                DBMS_OUTPUT.PUT_LINE('cod: ' || t_articole(i).cod_articol || ', nume: ' || t_articole(i).nume || ', cantitate ' || t_articole(i).cantitate || ', detalii garantie: ' || v_detalii_garantie);
+
+            END IF;
+            
+        END LOOP;
+        
+        SELECT dt.cod_beneficiar, SUM(dt.cost_total) 
+        INTO v_cod_temporar, v_suma_totala_comenzi_atunci --aflam cat a platit pe toate comenzile
+        FROM comanda c, detalii_tranzactie dt
+        WHERE c.cod_detalii_tranzactie = dt.cod_detalii_tranzactie and dt.cod_beneficiar = v_cod_beneficiar
+        GROUP BY dt.cod_beneficiar;
+        
+        SELECT dt.cod_beneficiar, SUM(dt.cost_total) 
+	INTO v_cod_temporar, v_suma_totala_vanzari_atunci --aflam cat a platit pe toate vanzarile
+        FROM vanzare_fizica vf, detalii_tranzactie dt
+        WHERE vf.cod_detalii_tranzactie = dt.cod_detalii_tranzactie and dt.cod_beneficiar = v_cod_beneficiar
+        GROUP BY dt.cod_beneficiar;
+        
+        DBMS_OUTPUT.PUT_LINE('Beneficiarul a acumulat ' || v_nr_total_puncte_fidelitate || ' puncte fidelitate ');
+        DBMS_OUTPUT.PUT_LINE('Cat a platit in total pt comenzi si vanzari:' || v_suma_totala_comenzi_atunci || ' ' || v_suma_totala_vanzari_atunci);
+        DBMS_OUTPUT.PUT_LINE('Cat ar fi platit in total pt comenzi si vanzari cu preturile actuale:' || v_suma_totala_comenzi || ' ' || v_suma_totala_vanzari);
+        
+    EXCEPTION
+        WHEN PERSOANA_CU_ACELASI_NUME THEN
+            DBMS_OUTPUT.PUT_LINE('Mai exista o persoana cu acelasi nume');
+        WHEN NU_EXISTA_TRANZACTII THEN 
+            DBMS_OUTPUT.PUT_LINE('Persoana nu a efectuat nicio tranzactie');
+    END exercitiul9;
+    /
+    
+BEGIN
+    exercitiul9('Andronic', 'Marcel'); --va merge
+END;
+/
+
+BEGIN
+    exercitiul9('Lupu', 'Eugen'); --too many rows
+    exercitiul9('Maria', 'Ana'); --no data found
+END;
+/
+
+--exista 2 beneficiari cu numele Lupu Eugen:
+select * from beneficiar where nume = 'Lupu' and prenume = 'Eugen';
+
+--beneficiarul Maria Ana nu a cumparat nimic:
+select * from beneficiar b, detalii_tranzactie dt
+where b.cod_beneficiar = dt.cod_beneficiar and nume = 'Maria' and prenume = 'Ana';
+
+
+
+
+--Exercitiul 10============================================================================================================================================================
+--10. Defini?i un trigger de tip LMD la nivel de comand?. Declan?a?i trigger-ul. 
+
+--Definiti un trigger care permite adaugarea unui angajat nou doar daca S < M;
+--S = suma salariilor anjatailor care au activitate
+--M = media incasarilor din vanzari fizice din tot anul 2023 a sediilor care respecta ambele conditii:
+--    1.au avut in 2023 mai mult de 5 luni cu profit sub 300
+--    2.au vandut mai putine produse vandute decat media. Produsele din pachete se iau separat.
+--de asemenea, nu se permite adaugarea de angajati in baza de date intre orele 00 si 03. 
+
+CREATE OR REPLACE VIEW nr_produse_per_sediu AS --view sa retin care produse a vandut un sediu adunat din toate vanzarile lui
+    (SELECT s.cod_sediu as cod_sediu,
+        COALESCE(SUM(nr_produse_per_vanzare.nr_articole_tip_produs_per_vanzare + nr_produse_per_vanzare.nr_produse_din_pachete_per_vanzare), 0)
+        AS nr_produse_vandute_per_sediu-- cate produse a vandut fiecare sediu
+    FROM
+        (SELECT vf.cod_vanzare_fizica as cod_vanzare_fizica, vf.cod_sediu as cod_sediu, -- cate produse are fiecare vanzare si sediul unde a avut loc vanzarea
+            COUNT(CASE WHEN pp.cod_articol IS NULL THEN aiv.cod_articol ELSE NULL END)  nr_articole_tip_produs_per_vanzare,
+            SUM(CASE WHEN pp.cod_articol IS NOT NULL 
+                THEN (SELECT COUNT(*) FROM produs_in_pachet pip WHERE pp.cod_articol = pip.cod_pachet) --daca e pachet trb sa numaram toate produsele din el
+                ELSE 0 END) nr_produse_din_pachete_per_vanzare
+        FROM vanzare_fizica vf, articol_in_vanzare aiv, articol a, pachet_promotional pp
+        WHERE aiv.cod_vanzare_fizica = vf.cod_vanzare_fizica AND aiv.cod_articol = a.cod_articol
+        AND a.cod_articol = pp.cod_articol(+) --daca codul din pp e nenul inseamna ca e pachet
+        GROUP BY vf.cod_vanzare_fizica, vf.cod_sediu) nr_produse_per_vanzare,
+        sediu s
+    WHERE s.cod_sediu = nr_produse_per_vanzare.cod_sediu(+)
+    GROUP BY s.cod_sediu);
+
+SELECT * FROM nr_produse_per_sediu;
+
+CREATE OR REPLACE VIEW medie_produse_vandute_per_sediu AS (
+    SELECT AVG(nr_produse_per_sediu.nr_produse_vandute_per_sediu) AS medie_produse_vandute_per_sediu
+    FROM nr_produse_per_sediu);
+
+
+
+CREATE OR REPLACE TRIGGER exercitiul10
+    BEFORE INSERT ON angajat
+DECLARE 
+
+    v_ora_inceput number(2) := 0;
+    v_ora_sfarsit number(2) := 0;
+    v_suma_salarii number(10);
+    v_numar_inregistrari number(4);
+    v_medie_produse number(10);
+    v_medie_produse_vandute_per_sediu number(10);
+    v_nr_sedii_indeplinesc_condiita number(10) := 0;
+    v_suma_profit_sedii number(10) := 0;
+    v_medie_profit number(10) := 0;
+    v_produse_per_sediu number(10) := 0;
+    v_cod_sediu sediu.cod_sediu%TYPE;
+    v_profit number(10);
+    
+    cursor c_profit_anual is
+           WITH luna AS (
+            SELECT ADD_MONTHS(TO_DATE('2023-01', 'YYYY-MM'), LEVEL - 1) AS luna --cream o  tabela cu toate lunile lui 2023 
+            --pentru a include si lunile unui sediu cand nu are vanzari, adica profit 0
+            FROM dual
+            CONNECT BY LEVEL <= 12),
+                
+            profit_lunar_per_sediu AS
+                (SELECT s.cod_sediu AS cod_sediu, l.luna AS luna_vanzare,
+                        SUM(NVL(dt.cost_total, 0)) AS profit_lunar
+                FROM sediu s, luna l, vanzare_fizica vf, detalii_tranzactie dt --luam toate sediile cu toate luniile si apoi outer join cu vanzarile
+                WHERE s.cod_sediu= vf.cod_sediu(+) AND vf.cod_detalii_tranzactie = dt.cod_detalii_tranzactie(+)
+                    AND TO_CHAR(dt.data_tranzactie(+), 'YYYY-MM') = TO_CHAR(l.luna, 'YYYY-MM') 
+                GROUP BY s.cod_sediu, l.luna),
+               
+            sedii_cu_profit_sub_300 AS ( --sedii care au mai mult de 5 luni cu profit sub 300
+            SELECT cod_sediu
+            FROM profit_lunar_per_sediu
+            WHERE profit_lunar < 300
+            GROUP BY cod_sediu
+            HAVING COUNT(*) > 5
+            )
+            --calculam profitul din 2023 pt sediile care au mai mult de 5 luni cu profit sub 300:
+            SELECT SUM(pl.profit_lunar) AS profit_anual, pl.cod_sediu
+            FROM profit_lunar_per_sediu pl, sedii_cu_profit_sub_300 s
+            WHERE pl.cod_sediu = s.cod_sediu            
+            GROUP BY pl.cod_sediu;
+        
+    cursor c_nr_produse_per_sediu (cod sediu.cod_sediu%TYPE) is --cursor care pentru un sediu dat arata cate produse a vandut
+        SELECT n.nr_produse_vandute_per_sediu nr
+        FROM nr_produse_per_sediu n
+        WHERE n.cod_sediu = cod;
+    
+BEGIN
+   --mai intai verificam ora
+   IF TO_CHAR(SYSDATE, 'HH24') BETWEEN v_ora_inceput AND v_ora_sfarsit
+   THEN RAISE_APPLICATION_ERROR(-20004, 'Aplicatia este in mentenanta, nu puteti insera intre orele ' || v_ora_inceput || ' si ' || v_ora_sfarsit);
+   END IF;
+   
+   --suma salariilor angajatilor care au activitate:
+   SELECT sum(salariu) INTO v_suma_salarii FROM angajat a
+   WHERE EXISTS (SELECT 1 FROM reclama r WHERE r.cod_angajat = a.cod_angajat)
+       OR EXISTS (SELECT 1 FROM colet c WHERE c.cod_angajat = a.cod_angajat)
+       OR EXISTS (SELECT 1 FROM sediu s WHERE s.cod_administrator = a.cod_angajat);
+   DBMS_OUTPUT.PUT_LINE('Suma salariilor angajatilor care au activitate este ' || v_suma_salarii);
+   
+   --calculam media produselor vandute de toate sediile
+   SELECT *
+   INTO v_medie_produse_vandute_per_sediu
+   FROM medie_produse_vandute_per_sediu;
+   DBMS_OUTPUT.PUT_LINE('Media produselor vandute de toate sediile este ' || v_medie_produse_vandute_per_sediu);
+   
+   --cursor cu care mergem prin profitul sediilor care au mai mult de 5 luni cu profit sub 300 
+   --vom veriifca pt fiecare daca a vandut mai putine produse decat media
+   DBMS_OUTPUT.PUT_LINE('Sediile cu mai mult de 5 luni cu profitul sub 300: ');
+   
+    OPEN c_profit_anual;
+        LOOP
+            FETCH c_profit_anual INTO v_profit, v_cod_sediu;
+            EXIT WHEN c_profit_anual%NOTFOUND; 
+                
+                OPEN c_nr_produse_per_sediu(v_cod_sediu);
+                    FETCH c_nr_produse_per_sediu INTO v_produse_per_sediu; --aflam cate produse a vandut sediul
+                CLOSE c_nr_produse_per_sediu;
+            
+            DBMS_OUTPUT.PUT('     Sediul ' || v_cod_sediu || ' are profit anual ' || v_profit || ' si a vandut ' || v_produse_per_sediu || ' produse ');
+            
+            IF v_produse_per_sediu < v_medie_produse_vandute_per_sediu THEN
+                v_nr_sedii_indeplinesc_condiita := v_nr_sedii_indeplinesc_condiita + 1;
+                v_suma_profit_sedii := v_suma_profit_sedii + v_profit;
+                DBMS_OUTPUT.PUT_LINE(', adica mai putine produse decat media.');
+            ELSE DBMS_OUTPUT.PUT_LINE('');
+            END IF;
+            
+        END LOOP;
+    CLOSE c_profit_anual;
+    
+    --calculam media profiturilor:
+    IF v_nr_sedii_indeplinesc_condiita > 0 THEN
+        v_medie_profit := v_suma_profit_sedii / v_nr_sedii_indeplinesc_condiita;
+    END IF;
+    
+    DBMS_OUTPUT.PUT_LINE('Media profiturilor sediilor care respecta conditiile e: ' || v_medie_profit);
+    IF v_suma_salarii > v_medie_profit THEN
+        RAISE_APPLICATION_ERROR(-20006, 'Suma salariilor este mai mare decat media profiturlor in sedii cu activitate redusa');
+    END IF;
+END;
+/
+
+
+insert into angajat(cod_angajat, nume, prenume, salariu, telefon, data_angajare) values (400, 'Todorescu', 'Simon', 6000, '+400734567845', to_date('12-09-2023', 'dd-mm-yyyy'));
+delete from angajat where cod_angajat = 400;
+rollback;
+
+drop trigger exerciitul10;
+
+
+
+--EXERCIITUL 11===========================================================================================================================================
+--11. Defini?i un trigger de tip LMD la nivel de linie. Declan?a?i trigger-ul. 
+--Sa se defineasca 2 triggere:
+--Primul se activeaza inaintea inserarii unei noi linii in tabela COMANDA sau inaintea update-ului unei linii;
+--In caz de inserare, verifica daca beneficiarul de care e legata comanda prin tabela detalii_tranzactie are articole bifate.
+--Daca nu are, nu avem ce articole sa punem in comanda deci trigger-ul va opri inserarea.
+-- Se presupune ca inregsitrarea corespunxatoare comenzii din detalii_tranzactie este deja existenta.
+--In caz de update, se verifica daca noul status este livrata si cel vechi nelivrata.
+--Pentru ca o comanda sa fie livrata trebuie ca toate coletele ei sa fie livrate, deci vom verifica daca exista vreun colet nelivrat.
+--In caz afirmativ, triggerul nu permite update-ul.
+
+--Al doilea trigger creeaza un colet cu statusul 'temporar' care sa pastreze toate articolele comandate pana la distribuirea lor in colete finale.
+--Articolele din comanda sunt cele care se afla bifate in cosul beneficiarului.
+--Dupa salvarea articolelor debifati acele inregistrari din cos
+--Trebuie sa vedem daca putem pastra un singur colet, adica daca exista vreun sediu in care se gasesc toate produsele lui componente
+--Sa se aleaga sediul cu cat mai putine colete de livrat. 
+--Daca gasim sediul schimbam statusul coletului din temporar in 'in procesare' si ii punem codul sediului gasit. Deci nu va mai fi colet temporar.
+--Daca nu gasim acel sediu ordonam sediile crescator dupa numarul de colete nelivrate din sediu si vedem in care sediu putem pune un articol din comanda.
+--Se va crea un colet care sa contina articolele repartizate in fiecare sediu.
+--La final sa se specifice daca au ramas articole nerepartizate si care, plus cantitatea.
+
+
+CREATE OR REPLACE TRIGGER exercitiul11_inainte
+    BEFORE INSERT OR UPDATE ON comanda FOR EACH ROW
+DECLARE 
+    v_numar_inregistrari number(4);
+    
+BEGIN
+    IF INSERTING THEN
+        SELECT COUNT(*)
+        INTO v_numar_inregistrari --cate articole are bifate in cos
+        FROM detalii_tranzactie dt, cos c
+        WHERE :NEW.cod_detalii_tranzactie = dt.cod_detalii_tranzactie AND dt.cod_beneficiar = c.cod_beneficiar AND c.bifat = 1;
+        
+        IF v_numar_inregistrari = 0 THEN
+            RAISE_APPLICATION_ERROR(-20004,'Beneficiarul nu are articole bifate in cos pentru a face comanda');
+        END IF;
+        
+    ELSIF UPDATING THEN
+        IF :NEW.status_comanda = 'livrata' AND :OLD.status_comanda = 'nelivrata' 
+        THEN 
+            SELECT COUNT(*) 
+            INTO v_numar_inregistrari -- verificam ca toate coletele componente sa fie livrate, afland cate sunt nelivrate
+            FROM colet c
+            WHERE c.cod_comanda = :OLD.cod_comanda AND c.status_colet <> 'livrat';
+            
+            IF v_numar_inregistrari > 0 
+            THEN RAISE_APPLICATION_ERROR(-20005,'O comanda poate avea statusul livrata doar daca toate coletele sale au acest status');
+            END IF;
+        END IF;
+        
+    END IF;
+END;
+/
+
+--beneficiarul 150 nu are produse in cos
+select * from cos where cod_beneficiar = 150;
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, 
+suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) 
+values (80000, 150, to_date('15-08-2024', 'dd-mm-yyyy'), 280, 28, 0, 0, 280, 0);
+
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) 
+values (7000, 80000, 'neprocesata', 1, 'generala');
+rollback;
+--comanda 100 e nelivrata si are si colete nelivrate
+select * from comanda where cod_comanda = 100;
+select * from colet where cod_comanda = 100;
+UPDATE comanda SET status_comanda = 'livrata' WHERE cod_comanda = 100;
+
+UPDATE colet SET status_colet = 'livrat' WHERE cod_comanda = 100;
+select * from colet where cod_comanda = 100;
+UPDATE comanda SET status_comanda = 'livrata' WHERE cod_comanda = 100;
+select * from comanda where cod_comanda = 100;
+rollback;
+
+
+
+CREATE OR REPLACE TRIGGER exercitiul11_dupa
+    AFTER INSERT ON comanda FOR EACH ROW
+DECLARE
+
+    v_minim_colete int := 99999999;
+    v_colete int;
+    v_cod_minim number(10) := -1; --pt a gasi sediul cu cat mai putine colete de livrat
+    v_cod_beneficiar beneficiar.cod_beneficiar%TYPE;
+    TYPE articol_record is RECORD (cod_articol articol.cod_articol%TYPE, cantitate articol_in_colet.cantitate%TYPE);
+    TYPE tablou_articole IS TABLE OF articol_record INDEX BY PLS_INTEGER;
+    t_articole tablou_articole;
+    v_articol_gasit boolean;
+    v_cantitate articol_in_sediu.cantitate%TYPE;
+    v_cantitate_luata int;
+    v_cod_colet int;
+    
+    CURSOR c_cursor IS --retine articolele din cos
+        SELECT cod_articol, cantitate
+        FROM cos c
+        WHERE c.cod_beneficiar = v_cod_beneficiar AND bifat = 1;
+BEGIN
+
+    SELECT cod_beneficiar --aflam cine a facut comanda
+    INTO v_cod_beneficiar 
+    FROM detalii_tranzactie dt
+    WHERE dt.cod_detalii_tranzactie = :NEW.cod_detalii_tranzactie;
+    
+    DBMS_OUTPUT.PUT_LINE('Beneificarul care a facut comanda are codul ' || v_cod_beneficiar || ' si a comandat articolele: ');
+    --cream coletul temporar care poate deveni colet normal daca nu va trebui sa impartim articolele in mai multe colete
+    --ii punem codul 1
+    INSERT INTO colet(cod_colet, cod_comanda, greutate, status_colet) 
+    VALUES (1, :NEW.cod_comanda, 1, 'colet_temporar');
+    
+    FOR i IN c_cursor LOOP
+        DBMS_OUTPUT.PUT_LINE('   cod_articol: ' || i.cod_articol || ', cantitate: ' || i.cantitate);
+        -- adaugam fiecare produs in noul colet:
+       INSERT INTO articol_in_colet(cod_colet, cod_comanda, cod_articol, cantitate)
+       VALUES (1, :NEW.cod_comanda, i.cod_articol, i.cantitate);
+       
+    END LOOP;
+    
+    --gasim sediile care au toate produsele din comanda:
+    DBMS_OUTPUT.PUT_LINE('Sediile care contin toate articolele din comanda sunt: ');
+    FOR i IN
+        (SELECT s.cod_sediu as cod_sediu
+        FROM sediu s
+        WHERE NOT EXISTS ( -- nu exista articol din sediu care sa nu existe in comanda
+            SELECT 1 FROM articol_in_colet aic WHERE aic.cod_comanda = :NEW.cod_comanda AND aic.cod_colet = 1
+                AND NOT EXISTS (
+                    SELECT 1 
+                    FROM articol_in_sediu ais
+                    WHERE ais.cod_sediu = s.cod_sediu AND ais.cod_articol = aic.cod_articol
+                    AND ais.cantitate >= aic.cantitate
+                )))
+        LOOP
+            
+            --calculam cate colete are deja de livrat sediul
+            SELECT COUNT(*)
+            INTO v_colete
+            FROM colet c
+            WHERE c.cod_sediu = i.cod_sediu;
+            DBMS_OUTPUT.PUT_LINE(i.cod_sediu || ', din care pleaca ' || v_colete || ' colete');
+            
+            IF v_colete < v_minim_colete THEN --daca sediul curent are mai putine colete de livrat updatam minimul
+                v_minim_colete := v_colete;
+                v_cod_minim := i.cod_sediu;
+            END IF;
+            
+        END LOOP;
+   
+    IF v_cod_minim = -1 THEN DBMS_OUTPUT.PUT_LINE('Nu am gasit un sediu care sa aiba toate articolele cerute.');
+        --impartim articolele in cate mai putine colete; luam sediile pe rand si punem in coletul catre sediul respectiv toate produsele care se gasesc acolo
+        OPEN c_cursor;
+        FETCH c_cursor BULK COLLECT INTO t_articole; -- in t_articole retinem articolul si cantitatea care a ramas nedistribuita in sediu(sedii)
+        CLOSE c_cursor;
+        
+        FOR i IN (SELECT s.cod_sediu as cod_sediu --toate sediile ordonate dupa numarul de colete
+                FROM colet c, sediu s
+                WHERE c.cod_sediu(+) = s.cod_sediu
+                GROUP BY s.cod_sediu
+                ORDER BY COUNT(c.cod_sediu)) LOOP
+                
+                v_articol_gasit := FALSE; --momentan nu am gasit niciun articol din comanda care sa se afle in sediu
+                
+                FOR j IN t_articole.FIRST..t_articole.LAST LOOP --vedem ce articole si in ce cantitati mai avem de distribuit
+                   IF t_articole(j).cantitate > 0 THEN --daca cantitatea ar fi fost 0 inseamna ca am distribuit tot articolul
+                       
+                       BEGIN
+                            SELECT cantitate --vedem in ce cantitate il avem in sediul curent
+                            INTO v_cantitate
+                            FROM articol_in_sediu
+                            WHERE cod_sediu = i.cod_sediu AND cod_articol = t_articole(j).cod_articol;
+                                                        
+                        EXCEPTION
+                            WHEN NO_DATA_FOUND THEN --daca nu s a gasit inregistrarea inseamna ca cantitatea e 0
+                                v_cantitate := 0; 
+                        END;
+                                        
+                        IF v_cantitate > 0 THEN 
+                            DBMS_OUTPUT.PUT('Am gasit articolul ' || t_articole(j).cod_articol || ' in sediul ' || i.cod_sediu || ' in cantitatea ' || v_cantitate || '.Ne trebuie ' || t_articole(j).cantitate || ' bucati.');
+                            v_cantitate_luata := 0; --cat vom lua din sediu 
+                                            
+                            IF v_cantitate <= t_articole(j).cantitate --daca nu avem destul in sediu luam tot si restul va trebui distribuit in alt sediu
+                            THEN t_articole(j).cantitate :=  t_articole(j).cantitate - v_cantitate;
+                                v_cantitate_luata := v_cantitate;
+                                v_cantitate := 0; --in sediu nu a mai ramas nimic
+                                                
+                            ELSE v_cantitate := v_cantitate - t_articole(j).cantitate;
+                                v_cantitate_luata := t_articole(j).cantitate;
+                                t_articole(j).cantitate := 0;
+                                              
+                            END IF;
+                            DBMS_OUTPUT.PUT_LINE('Luam ' || v_cantitate_luata || ' bucati. Au mai ramas in sediu ' || v_cantitate || ' bucati.');
+                            DBMS_OUTPUT.PUT_LINE('Mai avem ' || t_articole(j).cantitate || ' bucati din articol de distribuit in colete in alte sedii.');
+                            
+                            IF v_articol_gasit = FALSE THEN --nu exista coletul din sediul curent, il cream si punem in el articolul
+                                v_articol_gasit := TRUE;
+                                v_cod_colet := seq_colet.nextval;
+                                insert into colet (cod_colet, cod_comanda, cod_angajat, cod_sediu, greutate, status_colet, data_livrare) 
+                                values (v_cod_colet, :NEW.cod_comanda, NULL, i.cod_sediu, 1, 'nelivrat', NULL);
+                            END IF;
+                            
+                            insert into articol_in_colet (cod_articol, cod_colet, cod_comanda, cantitate) 
+                            values (t_articole(j).cod_articol, v_cod_colet, :NEW.cod_comanda, v_cantitate_luata);
+                            
+                            --actualizam cantitatea in sediu si in coletul initial lasam cantitatea care mai trebuie distribuita:
+                            UPDATE articol_in_sediu
+                            SET cantitate = v_cantitate
+                            WHERE cod_sediu = i.cod_sediu and cod_articol = t_articole(j).cod_articol;
+                            
+                            UPDATE articol_in_colet
+                                SET cantitate = t_articole(j).cantitate
+                                WHERE cod_articol = t_articole(j).cod_articol AND cod_colet = 1 AND cod_comanda = :NEW.cod_comanda;
+                        END IF;
+                                    
+                    END IF;
+                    
+                END LOOP;
+                
+        END LOOP;
+        
+        FOR i in t_articole.FIRST..t_articole.LAST LOOP -- afisam articolele ramase nedistribuite
+            IF t_articole(i).cantitate > 0 
+            THEN DBMS_OUTPUT.PUT_LINE('Ne mai trebuie ' || t_articole(i).cantitate || ' bucati din articolul ' || t_articole(i).cod_articol || ' care nu au fost repartizate in niciun colet. Asteptam noi aprovizionari.'); 
+            END IF;
+        END LOOP;
+        
+    ELSE DBMS_OUTPUT.PUT_LINE('Unul dintre sediile cu activitate putina este ' || v_cod_minim || '. Aici vom distribui coletul');
+        UPDATE colet SET cod_sediu = v_cod_minim, status_colet = 'nelivrat' WHERE cod_colet = 1 and cod_comanda = :NEW.cod_comanda; 
+    END IF;
+    
+    --debifam in cos:
+    UPDATE cos
+    SET bifat = 0
+    WHERE cod_beneficiar = v_cod_beneficiar;
+END;
+/
+
+--va gasi toate articolele intr-un sediu:
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) 
+values (800000, 130, to_date('15-08-2024', 'dd-mm-yyyy'), 280, 28, 0, 0, 280, 0); 
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) 
+values (70000, 800000, 'neprocesata', 1, 'generala');
+
+--vedem daca starea coletului temporar s a schimbat si daca e repartizat intr-un sediu:
+select * from colet c where c.cod_colet = 1 and c.cod_comanda = 7000;
+--vedem ce articole are in el:
+select c.cod_colet, c.cod_comanda, aic.cod_articol, aic.cantitate from colet c, articol_in_colet aic
+where c.cod_colet = 1 and c.cod_comanda = 70000 and aic.cod_colet = 1 and aic.cod_comanda = c.cod_comanda;
+--vedem daca mai sunt bifate articolele in cos:
+select * from cos c where cod_beneficiar = 130;
+
+
+--nu va gasi toate articolele intr-un sediu:
+insert into detalii_tranzactie (cod_detalii_tranzactie, cod_beneficiar, data_tranzactie, cost_total, puncte_fidelitate_castigate, puncte_fidelitate_folosite, suma_platita_in_puncte, suma_platita_card, suma_platita_numerar) 
+values (500, 140, to_date('15-08-2024', 'dd-mm-yyyy'), 280, 28, 0, 0, 280, 0); 
+insert into comanda (cod_comanda, cod_detalii_tranzactie, status_comanda, plata_la_livrare, tip_comanda) 
+values (400, 500, 'neprocesata', 1, 'generala');
+
+--vedem ce a mai ramas in coletul initial:
+select c.cod_colet, c.cod_comanda, aic.cod_articol, cantitate from colet c, articol_in_colet aic
+where c.cod_colet = 1 and c.cod_comanda = 400 and aic.cod_colet = 1 and aic.cod_comanda = c.cod_comanda;
+
+--vedem restul coletelor in care s a impartit primul:
+select * from colet c where c.cod_comanda = 400;
+
+--si ce articole are fiecare:
+select c.cod_colet, aic.cod_articol, cantitate from colet c, articol_in_colet aic
+where c.cod_comanda = 400 and aic.cod_colet = c.cod_colet and aic.cod_comanda = c.cod_comanda;
+rollback;
+
+
+
+
+DROP TRIGGER exercitiul11_inainte;
+
+DROP TRIGGER exercitiul11_dupa;
+
+
+
+
+--EXERCITIUL 12=============================================================================================================================
+--12. Defini?i un trigger de tip LDD. Declan?a?i trigger-ul. 
+
+--Creati un tabel in care sa stocati operatiile aplicate asupra structurii bazei de date.
+
+create table operatie(
+    cod_operatie int constraint cod_operatie_pk primary key,
+    operatie varchar2(40) NOT NULL,
+    baza_de_date varchar2(40),
+    nume_utilizator varchar2(40),
+    data_actiune date default sysdate, 
+    obiect_modificat varchar2(40) NOT NULL
+)
+
+create sequence seq_operatie start with 100 increment by 1 maxvalue 100000 nocycle nocache;
+
+CREATE OR REPLACE TRIGGER exercitiul12
+    AFTER CREATE OR ALTER OR DROP ON SCHEMA
+DECLARE 
+
+    v_obiect_modificat varchar2(100);
+    v_operatie varchar2(100);
+    
+BEGIN
+
+    v_obiect_modificat := sys.dictionary_obj_name;
+    v_operatie := sys.sysevent;
+    INSERT INTO operatie(cod_operatie, operatie, baza_de_date, nume_utilizator, obiect_modificat) 
+    VALUES (seq_operatie.nextval, v_operatie, sys.database_name, sys.login_user, v_obiect_modificat);
+    
+    IF v_operatie = 'CREATE' THEN
+        DBMS_OUTPUT.PUT_LINE('A fost creat obiectul ' || v_obiect_modificat);
+    ELSIF v_operatie = 'ALTER' THEN
+        DBMS_OUTPUT.PUT_LINE('A fost modificat obiectul ' || v_obiect_modificat);
+    ELSIF v_operatie = 'DROP' THEN
+        DBMS_OUTPUT.PUT_LINE('A fost ?ters obiectul ' || v_obiect_modificat);
+    END IF;
+END;
+
+create table tabel (
+    cod_tabel int
+)
+insert into tabel values(2);
+insert into tabel values(3);
+delete from tabel where cod_tabel = 2;
+truncate table tabel;
+select * from operatie;
+    
+rollback;
+DROP TRIGGER exerciitul12;
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    --EXERCIITUL 13==============================================================================================================================
+--13. Defini?i un pachet care s? con?in? toate obiectele definite în cadrul proiectului.  
+CREATE OR REPLACE PACKAGE exercitiul13 IS
+    PROCEDURE exercitiul6 (v_cod_sediu IN sediu.cod_sediu%TYPE);
+    PROCEDURE exercitiul7 (v_nume_sediu IN sediu.nume%TYPE DEFAULT 'CABLE POWER');
+    FUNCTION exercitiul8 (v_cod_articol IN articol.cod_articol%TYPE DEFAULT 100, v_operatie IN number) RETURN varchar2;
+    PROCEDURE exercitiul9(v_nume beneficiar.nume%TYPE, v_prenume beneficiar.prenume%TYPE);
+END exercitiul13;
+/
+
+CREATE OR REPLACE PACKAGE BODY exercitiul13 IS
+        
+    PROCEDURE exercitiul6 (v_cod_sediu IN sediu.cod_sediu%TYPE) 
+        IS
+            TYPE transport_record is RECORD (cod_articol articol.cod_articol%TYPE, cantitate articol_in_sediu.cantitate%TYPE);
+            TYPE tablou_indexat_transporturi IS TABLE OF transport_record INDEX BY PLS_INTEGER;
+            t_transporturi tablou_indexat_transporturi;
+            v_pret articol_in_sediu.cantitate%TYPE;
+            
+            c_maxim_furnizori CONSTANT NUMBER := 1000;
+            TYPE vector_furnizori IS VARRAY(c_maxim_furnizori) OF furnizor%ROWTYPE;
+            t_furnizori vector_furnizori := vector_furnizori();
+            
+            TYPE produs_record is RECORD (cod_articol articol.cod_articol%TYPE, nume articol.nume%TYPE);
+            TYPE tablou_imbricat_produse IS TABLE OF produs_record;
+            t_produse tablou_imbricat_produse := tablou_imbricat_produse();
+            
+            TYPE sediu_record is RECORD (cod_sediu sediu.cod_sediu%TYPE, nume sediu.nume%TYPE, cantitate articol_in_sediu.cantitate%TYPE);
+            TYPE tablou_indexat_sedii IS TABLE OF sediu_record INDEX BY BINARY_INTEGER;
+            t_sedii tablou_indexat_sedii;
+            v_cantitate_totala int;
+        BEGIN
+        
+            t_transporturi(1) := transport_record(101, 100);
+            t_transporturi(2) := transport_record(102, 120);
+            t_transporturi(3) := transport_record(105, 200);
+            
+            FOR i IN t_transporturi.FIRST..t_transporturi.LAST LOOP --iteram transporturile si le inseram increstem stocurile
+                
+                UPDATE articol_in_sediu
+                SET cantitate = cantitate + t_transporturi(i).cantitate
+                WHERE cod_sediu = v_cod_sediu AND cod_articol = t_transporturi(i).cod_articol;
+                
+                IF SQL%ROWCOUNT = 0 THEN --daca nu a updatat nicio linie inseamna ca produsul nu exista deloc in sediu si trebuie adaugata o inserare
+                    SELECT pret INTO v_pret FROM articol WHERE cod_articol = t_transporturi(i).cod_articol; --pretul il luam din tabela articol, adica pretul universal
+                    INSERT INTO articol_in_sediu (cod_sediu, cod_articol, cantitate, pret) VALUES (v_cod_sediu, t_transporturi(i).cod_articol, t_transporturi(i).cantitate, v_pret);
+                END IF;
+            END LOOP;
+            
+            FOR i in (SELECT * FROM furnizor) LOOP --retinem in vector toate datele din tabela furnizor (nume si cod, mai e si o adresa de mail dar nu ne trebuie)
+               t_furnizori.EXTEND;
+               t_furnizori(t_furnizori.LAST) := i;
+            END LOOP;
+            
+            FOR i IN t_furnizori.FIRST..t_furnizori.LAST LOOP --luam produsele furnizate
+            
+                SELECT p.cod_articol, nume BULK COLLECT INTO t_produse
+                FROM produs p, articol a
+                WHERE cod_furnizor = t_furnizori(i).cod_furnizor AND p.cod_articol = a.cod_articol;
+                
+                IF t_produse.COUNT = 0 THEN DBMS_OUTPUT.PUT_LINE('Furnizorul ' || t_furnizori(i).nume || ' nu furnizeaza produse');
+                ELSE 
+                    DBMS_OUTPUT.PUT_LINE('Furnizorul ' || t_furnizori(i).nume || ' ne vinde ' || t_produse.COUNT || ' produs(e):');
+                    
+                    FOR j IN t_produse.FIRST..t_produse.LAST LOOP
+                       
+                        v_cantitate_totala := 0;
+                        DBMS_OUTPUT.PUT_LINE('      ' || t_produse(j).nume || ', cantitati: ');
+                        
+                        SELECT s.cod_sediu, s.nume, NVL(ais.cantitate, 0) AS cantitate BULK COLLECT INTO t_sedii --pt un produs aflam cantitatea din fiecare sediu
+                        FROM sediu s, articol_in_sediu ais
+                        WHERE cod_articol(+) = t_produse(j).cod_articol AND s.cod_sediu = ais.cod_sediu(+)
+                        ORDER BY s.nume;
+                        
+                        FOR k IN t_sedii.FIRST..t_sedii.LAST LOOP
+                            DBMS_OUTPUT.PUT_LINE('              sediul' || t_sedii(k).nume || ': ' || t_sedii(k).cantitate || ' bucati');
+                            v_cantitate_totala := v_cantitate_totala + t_sedii(k).cantitate;
+                        END LOOP;
+                        --t_sedii.DELETE; --nu trebuie neaparat sters
+                        DBMS_OUTPUT.PUT_LINE('            Cantitatea totala: ' || v_cantitate_totala || ' bucati');
+                    END LOOP;
+                    
+                    DBMS_OUTPUT.PUT_LINE('==================================================');
+                    --t_produse.DELETE;
+                END IF;
+               
+            END LOOP;
+        END exercitiul6;
+    
+
+
+    --EXERCITIUL 7=======================================================================================================
+    PROCEDURE exercitiul7 (v_nume_sediu IN sediu.nume%TYPE DEFAULT 'CABLE POWER')  IS
+        TYPE refcursor IS REF CURSOR;
+        v_cursor refcursor;
+        
+        CURSOR c_principal IS --ciclu cursor care selecteaza pentru un colet codul si curierul (daca exista); ia doar coletele care respecta cerinta
+            SELECT c.cod_colet cod_colet, c.cod_comanda cod_comanda, NVL(a.cod_angajat, -1) AS cod_curier,
+            NVL(CONCAT(a.nume, ' ' || a.prenume), 'Curierul nu a fost inca asignat') AS nume_curier
+            FROM sediu s, colet c, angajat a 
+            WHERE c.cod_sediu = s.cod_sediu AND v_nume_sediu = UPPER(s.nume) AND UPPER(c.status_colet) = 'NELIVRAT'
+            AND a.cod_angajat = c.cod_angajat(+); --left join pentru cazul in care curierul are cod_angajat NULL
+            
+        CURSOR c_secundar (v_cod_colet colet.cod_colet%TYPE, v_cod_comanda colet.cod_comanda%TYPE) IS --cursor clasic parametrizat cu un ref cursor in el;pentru o comanda afla cate produse din pachete promotionale are
+            SELECT a.cod_articol as cod, a.nume as nume, aic.cantitate as cantitate,
+                CURSOR(SELECT pip.cod_produs cod_produs, a2.nume nume2 -- expresie cursor care pt un pachet afla ce produse are
+                       FROM produs_in_pachet pip, articol a2
+                       WHERE pip.cod_pachet = a.cod_articol AND a2.cod_articol = pip.cod_produs)
+            FROM articol_in_colet aic, pachet_promotional p, articol a
+            WHERE aic.cod_colet = v_cod_colet and aic.cod_comanda = v_cod_comanda and aic.cod_articol = p.cod_articol 
+                AND a.cod_articol = p.cod_articol;
+        
+        v_detalii_curier varchar2(100);
+        v_cod_articol articol.cod_articol%TYPE;
+        v_nume_articol articol.nume%TYPE;
+        v_nume_produs articol.nume%TYPE;
+        v_cantitate articol_in_colet.cantitate%TYPE;
+        v_cod_produs produs.cod_articol%TYPE;
+        
+        BEGIN
+            FOR i IN c_principal LOOP
+            
+                EXIT WHEN c_principal%NOTFOUND;
+                v_detalii_curier := ' (';
+                
+                IF i.cod_curier = -1 
+                THEN v_detalii_curier := v_detalii_curier || 'al carui curier nu a fost inca asignat)';
+                ELSE v_detalii_curier := v_detalii_curier || 'care va fi livrat de curierul ' || i.nume_curier || ' cod ' || i.cod_curier || ')';
+                END IF;
+                
+                DBMS_OUTPUT.PUT_LINE('Coletul' || v_detalii_curier || ' cu codul ' || i.cod_colet || ' din comanda ' || i.cod_comanda || ',are pachetele:');
+                
+                OPEN c_secundar(i.cod_colet, i.cod_comanda);
+                    LOOP
+                        FETCH c_secundar INTO v_cod_articol, v_nume_articol, v_cantitate, v_cursor;
+                        EXIT WHEN c_secundar%NOTFOUND;
+                        DBMS_OUTPUT.PUT_LINE('         cod: ' || v_cod_articol || ', nume: ' || v_nume_articol || ', cantitate: ' || v_cantitate || ', produse componente');
+                        
+                        LOOP
+                            FETCH v_cursor INTO v_cod_produs, v_nume_produs; 
+                                EXIT WHEN v_cursor%NOTFOUND;
+                                DBMS_OUTPUT.PUT_LINE('               ' || v_nume_produs || ', cod:' || v_cod_produs); 
+                        END LOOP;
+                  
+                    END LOOP;
+                CLOSE c_secundar;
+                
+            END LOOP;
+    
+        END exercitiul7;
+    
+
+--EXERCITIUL 8 ======================================================================================
+    
+   
+    FUNCTION exercitiul8 (v_cod_articol IN articol.cod_articol%TYPE DEFAULT 100, v_operatie IN number)
+    RETURN varchar2
+    IS
+        COD_ARTICOL_INVALID exception;
+        COMANDA_INVALIDA exception;
+        OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI exception;
+        PRODUS_NU_ARE_FURNIZOR exception;
+        NU_EXISTA_CONCURSURI exception;
+        
+        v_concluzie varchar2(100);
+        v_temporar_cod_articol articol.cod_articol%TYPE;
+        v_tip_articol varchar2(15);
+        v_nume_furnizor furnizor.nume%TYPE;
+        v_cod_furnizor furnizor.cod_furnizor%TYPE;
+        v_nr_produse_furnizate number(6);
+        v_nr_concursuri number(5);
+        v_nr_participanti number(6, 2);
+        v_profit number(8);
+        v_cost_articol number(8);
+        v_medie_reclame number(8);
+    BEGIN
+    
+        v_concluzie := 'Nu a fost efectuata operatia';
+        BEGIN --bloc pentru a verifica daca exista codul introdus
+            SELECT cod_articol INTO v_temporar_cod_articol FROM articol WHERE cod_articol = v_cod_articol;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN 
+                RAISE COD_ARTICOL_INVALID;
+        END;
+        
+        --aflam tipul articolului: produs sau pachet promotional
+        v_tip_articol := 'produs';
+        BEGIN
+        SELECT cod_articol INTO v_temporar_cod_articol FROM produs WHERE cod_articol = v_cod_articol;
+        
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN 
+                v_tip_articol := 'pachet';
+        END;
+        
+        IF v_operatie = 1 THEN
+            --verificam daca articolul este produs, altfel nu are furnizor.
+            IF v_tip_articol = 'produs' THEN 
+                SELECT cod_furnizor INTO v_cod_furnizor
+                FROM produs WHERE cod_articol = v_cod_articol;
+                
+                IF v_cod_furnizor IS NULL 
+                THEN RAISE PRODUS_NU_ARE_FURNIZOR;
+                ELSE
+                    SELECT f.nume, (COUNT(*) - 1) INTO v_nume_furnizor, v_nr_produse_furnizate --COUNT - 1 pt ca un produs furnizat e parametrul functiei
+                    FROM furnizor f, produs p WHERE f.cod_furnizor = v_cod_furnizor AND p.cod_furnizor = f.cod_furnizor
+                    GROUP BY f.nume;
+                    
+                    RETURN 'Produsul e furnizat de ' || v_nume_furnizor || ' care are codul ' || v_cod_furnizor || ' si mai furnizeaza alte ' || v_nr_produse_furnizate || ' produse';
+                END IF;
+                RETURN v_concluzie;
+            ELSE
+                RAISE OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI;
+            END IF;
+            
+        ELSIF v_operatie = 2 THEN 
+            IF v_tip_articol = 'produs' THEN 
+            
+                SELECT COUNT(*) nr_concursuri, AVG(nr_participari), SUM(profit_concurs) 
+                INTO v_nr_concursuri, v_nr_participanti, v_profit
+                FROM( --luam detalii despre toate concursurile care au printre premii produsul 
+                    SELECT c.cod_concurs cod_concurs, COUNT(pp.cod_beneficiar) nr_participari,
+                        (SELECT COUNT(*) * c.taxa_inscriere --doar beneficiarii fara cont_premium platesc taxa
+                        FROM participa pp2, beneficiar b
+                        WHERE pp2.cod_concurs = c.cod_concurs AND b.cod_beneficiar = pp2.cod_beneficiar 
+                        AND b.cont_premium = 0) AS profit_concurs
+                    FROM premiu p, concurs c, participa pp
+                    WHERE p.cod_articol = v_cod_articol AND p.cod_concurs = c.cod_concurs AND pp.cod_concurs = c.cod_concurs  
+                        AND TO_CHAR(c.data_concurs, 'YYYY') = 2023
+                    GROUP BY c.cod_concurs, c.taxa_inscriere
+                );
+            
+                IF v_nr_concursuri = 0 THEN RAISE NU_EXISTA_CONCURSURI;
+                ELSE RETURN 'Articolul de tip ' || v_tip_articol || ' apare ca premiu in ' || v_nr_concursuri || ' concurs(uri) din 2023, la care au participant in medie ' || v_nr_participanti || ' persoane.
+                    Profitul total al concursurilor este ' || v_profit || ' RON.';
+                END IF;
+                
+            ELSE 
+                RAISE OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI;
+            END IF;
+            
+        ELSIF v_operatie = 3 THEN
+            --aflam daca articolul are costul din reclame mai mare decat media
+            SELECT AVG(cost_per_reclama)
+            INTO v_medie_reclame FROM(
+                SELECT a.cod_articol, SUM(NVL(r.cost_total, 0)) cost_per_reclama --costul reclamelor per articol
+                FROM articol a, reclama r
+                WHERE a.cod_articol = r.cod_articol(+)
+                GROUP BY a.cod_articol);
+                
+            DBMS_OUTPUT.PUT_LINE('Media costului reclamelor per articol este ' || v_medie_reclame);
+            --calculam costul din reclame pt articol:
+            SELECT NVL(SUM(r.cost_total), 0)
+            INTO v_cost_articol
+            FROM articol a, reclama r
+            WHERE a.cod_articol = r.cod_articol;
+            
+            DBMS_OUTPUT.PUT_LINE('Costul reclamelor pentru articolul ' || v_cod_articol || ' este ' || v_cost_articol);
+            IF v_cost_articol > v_medie_reclame 
+            THEN RETURN 'Articolul are costul din reclame mai mare decat  media';
+            ELSE RETURN 'Articolul NU are costul din reclame mai mare decat media';
+            END IF;
+    
+        ELSE
+            RAISE COMANDA_INVALIDA;
+        END IF;
+        RETURN v_concluzie;
+        
+    EXCEPTION
+        WHEN COD_ARTICOL_INVALID THEN
+            RETURN 'Exceptie: Codul introdus nu se alfa in baza de date';
+        WHEN COMANDA_INVALIDA THEN
+            RETURN 'Exceptie: Comanda aleasa nu este valida';
+        WHEN OPERATIE_INVALIDA_PT_TIPUL_ARTICOLULUI THEN
+            RETURN 'Exceptie: Operatie invalida pentru tipul articolului';
+        WHEN PRODUS_NU_ARE_FURNIZOR THEN
+            RETURN 'Exceptie: Produsl nu are furnizor';
+        WHEN NU_EXISTA_CONCURSURI THEN
+            RETURN 'Exceptie: Nu s au gasit concursuri';
+        WHEN OTHERS THEN
+            RETURN 'Exceptie necunoscuta';
+    END exercitiul8;
+
+
+--EXERCITIUL 9=================================================================================================
+      PROCEDURE exercitiul9(v_nume beneficiar.nume%TYPE, v_prenume beneficiar.prenume%TYPE)
+      IS
+            PERSOANA_CU_ACELASI_NUME exception;
+            NU_EXISTA_TRANZACTII exception;
+            v_cod_beneficiar beneficiar.cod_beneficiar%TYPE;
+            v_temporar_cod_beneficiar beneficiar.cod_beneficiar%TYPE;
+            TYPE date_articole_record is RECORD (tip_tranzactie varchar2(30), tip_articol varchar2(30), 
+                puncte_fidelitate articol.puncte_fidelitate%TYPE, 
+                cod_articol articol.cod_articol%TYPE, nume articol.nume%TYPE, pret_la_cumparare articol.pret%TYPE, 
+                data_cumparare date, cantitate number(8));
+            TYPE tablou_imbricat_articole IS TABLE OF date_articole_record;
+            t_articole tablou_imbricat_articole := tablou_imbricat_articole();
+            t_articole_temporar tablou_imbricat_articole := tablou_imbricat_articole(); --vom retine aici datele despre toate produsele cumparate (din vanzari si comenzi)
+           
+            v_temporar_nr number(6);
+            v_suma_totala_comenzi number(11) := 0; -- suma de cost total al tranzactiilor legate de comenzi
+            v_suma_totala_vanzari number(11) := 0; -- suma de cost total al tranzactiilor legate de vanzari
+            v_suma_totala_comenzi_atunci number(11) := 0;
+            v_suma_totala_vanzari_atunci number(11) := 0;
+            v_detalii_garantie varchar2(150);
+            v_luni_garantie produs.luni_garantie%TYPE;
+            v_data_expirare_garantie date;
+            v_nr_total_puncte_fidelitate number(11) := 0; --adunam pt fiecare articol cumparat punctele de fidelitate
+            v_cod_temporar int;
+        BEGIN
+            --verificam daca mai exista alta persoana cu acelasi nume si prenume
+            BEGIN
+                SELECT cod_beneficiar INTO v_cod_beneficiar FROM beneficiar WHERE prenume = v_prenume AND nume = v_nume;
+            EXCEPTION
+                WHEN TOO_MANY_ROWS THEN RAISE PERSOANA_CU_ACELASI_NUME;
+            END;
+            
+            --verificam daca persoana a facut cumparaturi
+            BEGIN
+                SELECT cod_beneficiar INTO v_temporar_nr FROM detalii_tranzactie WHERE v_cod_beneficiar = cod_beneficiar;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN RAISE NU_EXISTA_TRANZACTII;
+                WHEN TOO_MANY_ROWS THEN NULL; --se va arunca too many rows daca avem tranzactii. oprim exceptia.
+            END;
+            
+            --calculam datele pentru comenzi:
+            SELECT 'comanda' tip_tranzactie, 
+                CASE WHEN pp.cod_articol IS NULL THEN 'produs'
+                    ELSE 'pachet'
+                END AS tip_articol,
+                a.puncte_fidelitate puncte_fidelitate, a.cod_articol cod_articol, a.nume nume, 
+                a.pret pret_la_cumparare, cc.data_livrare data_cumparare, aic.cantitate cantitate
+            BULK COLLECT INTO t_articole
+            FROM detalii_tranzactie dt, comanda c, colet cc, articol_in_colet aic, articol a, pachet_promotional pp
+            WHERE dt.cod_beneficiar = v_cod_beneficiar AND dt.cod_detalii_tranzactie = c.cod_detalii_tranzactie
+                AND c.cod_comanda = cc.cod_comanda
+                AND aic.cod_colet = cc.cod_colet AND aic.cod_comanda = cc.cod_comanda AND aic.cod_articol = a.cod_articol
+                AND a.cod_articol = pp.cod_articol(+);       
+            
+            --datele pentru vanzari fizice:
+            SELECT 'vanzare fizica' tip_tranzactie,
+                CASE WHEN a.cod_articol IN (SELECT cod_articol FROM produs) THEN 'produs'
+                    ELSE 'pachet'
+                END AS tip_articol,
+                a.puncte_fidelitate puncte_fidelitate, a.cod_articol cod_articol, a.nume nume, ais.pret pret_la_cumparare, 
+                dt.data_tranzactie data_cumparare, aiv.cantitate cantitate
+            BULK COLLECT INTO t_articole_temporar
+            FROM detalii_tranzactie dt, vanzare_fizica vf, articol_in_vanzare aiv, articol a, articol_in_sediu ais
+            WHERE dt.cod_beneficiar = v_cod_beneficiar AND dt.cod_detalii_tranzactie = vf.cod_detalii_tranzactie 
+                AND vf.cod_vanzare_fizica = aiv.cod_vanzare_fizica 
+                AND aiv.cod_articol = a.cod_articol AND vf.cod_sediu = ais.cod_sediu 
+                AND ais.cod_articol = a.cod_articol;
+            
+            t_articole := t_articole MULTISET UNION t_articole_temporar; --adaugam in t_articole si datele vanzarilor_fizice. nu puteam direct pentru ca bulk collect ar fi sters comenzile.
+            
+            DBMS_OUTPUT.PUT_LINE('COMENZI:');
+            FOR i IN t_articole.FIRST..t_articole.LAST LOOP
+                
+                IF i > t_articole.FIRST AND t_articole(i - 1).tip_tranzactie = 'comanda' AND t_articole(i).tip_tranzactie = 'vanzare fizica' --cand am gasit primul articol dintr-o vanzare fizica
+                THEN DBMS_OUTPUT.PUT_LINE('VANZARI:');
+                END IF;
+                
+                IF t_articole(i).tip_tranzactie = 'comanda'
+                THEN v_suma_totala_comenzi := v_suma_totala_comenzi + (t_articole(i).pret_la_cumparare * t_articole(i).cantitate); --calculam cele 2 sume totale pe care le ar plati cu preturile de acum
+                ELSE v_suma_totala_vanzari := v_suma_totala_vanzari + (t_articole(i).pret_la_cumparare * t_articole(i).cantitate);
+                END IF;
+                
+                v_nr_total_puncte_fidelitate := v_nr_total_puncte_fidelitate + (t_articole(i).puncte_fidelitate * t_articole(i).cantitate);
+                
+                IF t_articole(i).tip_articol = 'pachet' THEN --daca articolul curent e pachet trebuie sa aflam toate produsele din el
+                    DBMS_OUTPUT.PUT_LINE('Din pachetul: ' || t_articole(i).cod_articol || ': ');
+                    FOR j IN 
+                    (SELECT p.luni_garantie, a.nume, a.cod_articol
+                    FROM produs p, produs_in_pachet pip, articol a
+                    WHERE t_articole(i).cod_articol = pip.cod_pachet AND pip.cod_produs = p.cod_articol AND a.cod_articol = p.cod_articol) LOOP
+                        
+                        v_detalii_garantie := '';
+                        
+                        IF t_articole(i).data_cumparare IS NULL --daca nu avem data cumpararii inseamna ca e dintr o vanzare fizica unde clientul nu a platit prin contul aplicatiei
+                        THEN v_detalii_garantie := 'produs nelivrat inca, garantia de ' || j.luni_garantie || ' luni inca nu se aplica ';
+                        ELSE 
+                            v_data_expirare_garantie := ADD_MONTHS(t_articole(i).data_cumparare, j.luni_garantie); --calculam cand expira garantia
+                            
+                            IF v_data_expirare_garantie < sysdate 
+                            THEN v_detalii_garantie := 'garantie expirata';
+                            ELSE v_detalii_garantie := 'garantia expira pe ' || TO_CHAR(v_data_expirare_garantie, 'dd-mm-yyyy');
+                            END IF;
+                        END IF;
+                        DBMS_OUTPUT.PUT_LINE('        cod: ' || j.cod_articol ||  ' nume: ' || j.nume || ', cantitate ' || t_articole(i).cantitate || ', detalii garantie: ' || v_detalii_garantie);
+              
+                    END LOOP;
+                     
+                ELSE --daca e de tip produs il afisam direct
+                    SELECT luni_garantie INTO v_luni_garantie FROM produs WHERE cod_articol = t_articole(i).cod_articol;
+                    v_detalii_garantie := '';
+                    
+                    IF t_articole(i).data_cumparare IS NULL 
+                    THEN v_detalii_garantie := 'produs nelivrat inca, garantia de ' || v_luni_garantie || ' luni inca nu se aplica ';
+                    ELSE 
+                        v_data_expirare_garantie := ADD_MONTHS(t_articole(i).data_cumparare, v_luni_garantie);
+                        
+                        IF v_data_expirare_garantie < sysdate 
+                        THEN v_detalii_garantie := 'garantie expirata';
+                        ELSE v_detalii_garantie := 'garantia expira pe ' || TO_CHAR(v_data_expirare_garantie, 'dd-mm-yyyy');
+                        END IF;
+                    END IF;
+                    DBMS_OUTPUT.PUT_LINE('cod: ' || t_articole(i).cod_articol || ', nume: ' || t_articole(i).nume || ', cantitate ' || t_articole(i).cantitate || ', detalii garantie: ' || v_detalii_garantie);
+                END IF;
+            END LOOP;
+            
+            SELECT dt.cod_beneficiar, SUM(dt.cost_total) 
+            INTO v_cod_temporar, v_suma_totala_comenzi_atunci --aflam cat a platit pe toate comenzile
+            FROM comanda c, detalii_tranzactie dt
+            WHERE c.cod_detalii_tranzactie = dt.cod_detalii_tranzactie and dt.cod_beneficiar = v_cod_beneficiar
+            GROUP BY dt.cod_beneficiar;
+            
+            SELECT dt.cod_beneficiar, SUM(dt.cost_total) 
+            INTO v_cod_temporar, v_suma_totala_vanzari_atunci --aflam cat a platit pe toate vanzarile
+            FROM vanzare_fizica vf, detalii_tranzactie dt
+            WHERE vf.cod_detalii_tranzactie = dt.cod_detalii_tranzactie and dt.cod_beneficiar = v_cod_beneficiar
+            GROUP BY dt.cod_beneficiar;
+            
+            DBMS_OUTPUT.PUT_LINE('Beneficiarul a acumulat ' || v_nr_total_puncte_fidelitate || ' puncte fidelitate ');
+            DBMS_OUTPUT.PUT_LINE('Cat a platit in total pt comenzi si vanzari:' || v_suma_totala_comenzi_atunci || ' ' || v_suma_totala_vanzari_atunci);
+            DBMS_OUTPUT.PUT_LINE('Cat ar fi platit in total pt comenzi si vanzari cu preturile actuale:' || v_suma_totala_comenzi || ' ' || v_suma_totala_vanzari);
+            
+        EXCEPTION
+            WHEN PERSOANA_CU_ACELASI_NUME THEN
+                DBMS_OUTPUT.PUT_LINE('Mai exista o persoana cu acelasi nume');
+            WHEN NU_EXISTA_TRANZACTII THEN 
+                DBMS_OUTPUT.PUT_LINE('Persoana nu a efectuat nicio tranzactie');
+    END exercitiul9;
+    
+
+END exercitiul13;
+/
+
+BEGIN
+    exercitiul13.exercitiul6(100);
+END;
+/
+
+BEGIN
+    exercitiul13.exercitiul7();
+END;
+/
+
+
+BEGIN
+    DBMS_OUTPUT.PUT_LINE('Rezultatul functiei: ' || exercitiul13.exercitiul8(100, 2));
+END;
+/
+
+BEGIN
+    exercitiul13.exercitiul9('Andronic', 'Marcel');
+END;
+/
+
+
+
+
+
+
+--EXERCIITUL 14=====================================================================================================================================================================================
+--14. Defini?i un pachet care s? includ? tipuri de date complexe ?i obiecte necesare unui flux de ac?iuni 
+--integrate, specifice bazei de date definite (minim 2 tipuri de date, minim 2 func?ii, minim 2 proceduri). 
+
+
+--Pentru prima functie:
+--aflam mai intai ce a premiu a castigat fiecare si ce contine, plus punctajul necesar pt a-l primi si 
+--ce punctaj a obtinut concurentul la concurusl care ii ofera premiul
+--si al catelea premiu din concursul corespunzator e 
+CREATE OR REPLACE VIEW castiguri AS
+    (SELECT p.cod_premiu as cod_premiu, p.cod_concurs as cod_concurs, b.cod_beneficiar as cod_beneficiar, 
+        nvl(p.suma, 0) as suma_bani, produs.cod_articol as cod_articol, nvl(a.pret, 0) as pret_produs_castigat,
+        punctaj_minim as punctaj_cerut_de_premiu, punctaj as punctaj_obtinut_concurs,
+            (SELECT COUNT(*) + 1 --numaram cate premii din concursul curent au punctaj necesar mai mare decat premiul castigat
+            FROM premiu p2, concurs c2
+            WHERE p2.cod_concurs = c2.cod_concurs AND c2.cod_concurs = c.cod_concurs
+            AND p2.punctaj_minim > p.punctaj_minim) as rang_premiu_in_concurs
+        
+    FROM premiu p, concurs c, participa pp, beneficiar b, produs, articol a
+    WHERE p.cod_concurs = c.cod_concurs AND c.cod_concurs = pp.cod_concurs 
+        AND pp.cod_beneficiar = b.cod_beneficiar AND p.cod_articol = produs.cod_articol(+) -- outer join pt ca e posibil ca premiul sa nu ofere produs
+        AND produs.cod_articol = a.cod_articol(+) --daca produsul e null si superentitatea lui va fi
+        AND pp.punctaj >= p.punctaj_minim --pentru a vedea ce premiu a luat
+        AND p.punctaj_minim = (SELECT(MAX(punctaj_minim)) --punctajul maxim al unui premiu din concursul curent <= cat a obtinut concurentul
+                              FROM premiu p2
+                              WHERE p2.cod_concurs = p.cod_concurs AND pp.punctaj >= p2.punctaj_minim));
+                
+select * from castiguri; 
+
+CREATE OR REPLACE PACKAGE exercitiul14 IS
+    --prima functie:
+    TYPE tablou_indexat_coduri IS TABLE OF number(10) INDEX BY PLS_INTEGER;
+    TYPE castig_record IS RECORD  --informatii despre fiecare premiu castigat de fiecare concurent
+        (cod_premiu int, 
+        cod_concurs int, 
+        cod_beneficiar int,
+        suma_bani int, 
+        cod_articol int, 
+        pret_produs_castigat int, 
+        punctaj_cerut_de_premiu int, 
+        punctaj_obtinut_concurs int, 
+        rang_premiu_in_concurs int);
+    TYPE tablou_indexat_castiguri IS TABLE OF castig_record INDEX BY PLS_INTEGER;
+    
+    FUNCTION premii_14(v_suma_maxima IN OUT number, t_coduri IN OUT tablou_indexat_coduri) RETURN number;
+    
+    --A doua functie:
+    FUNCTION comparatie_pachet_produs_14 (v_cod_sediu IN sediu.cod_sediu%TYPE, v_cod_pachet OUT pachet_promotional.cod_articol%TYPE) 
+    RETURN number;
+    --Prima procedura:
+    TYPE articol_record IS RECORD (cod_articol int, procent number);
+    TYPE tablou_imbricat_articole IS TABLE OF articol_record; --aici retinem fiecare articol si cu cat trebuie sa ii crestem pretul
+    PROCEDURE recenzii_14(v_procent1 IN number, v_procent2 IN number);
+    
+    --A doua procedura:
+    PROCEDURE articole_comandate_14(v_nr_persoane IN number);
+END exercitiul14;
+/
+
+CREATE OR REPLACE PACKAGE BODY exercitiul14 IS
+    
+--Prima functie:
+--Aflati pentru fiecare concurs castigatorii si ce premii au castigat.
+--Se va afisa si al catelea premiu din concurs e (in functie de punctajul cerut pentru a primi premiul).
+--Functia va returna numarul de premii castigate in total. Nu conteaza daca un beneficiar a castigat 2 premii.
+--Pentru a castiga un premiu, beneficiarul trebuie sa aiba punctajul mai mare sau egal cu punctajul cerut de premiu.
+--Se va lua cel mai mare premiu care indeplineste conditia.
+--Sa se afle cate premii a castigat fiecare beneficiar
+--Daca a participat si nu a castigat nimic se va specifica asta, la fel si daca nu a participat deloc.
+--Functia va avea parametrii in out un tablou care retine beneficiarii care au castigat un premiu cu valoarea maxima
+--si celalat parametru este acea valoare maxima
+--cel mai scump premiu (suma de pret produs si bani dintr-un premiu) si codul celui care l-a castigat..
+--Se presupune ca premiile din cadrul aceluiasi concurs au punctaje necesare distincte.
+    FUNCTION premii_14 (v_suma_maxima IN OUT number, t_coduri IN OUT tablou_indexat_coduri)
+        RETURN number
+        IS
+            v_nr_premii_castigate number(8):= 0;
+            t_castiguri tablou_indexat_castiguri;
+            
+             --aflam pt fiecare beneficiar daca a participat si cate concursuri a castigat
+             CURSOR c_situatie_beneficiari IS
+                SELECT b.cod_beneficiar as cod_beneficiar,
+                        (CASE
+                            WHEN COUNT(c.cod_beneficiar) > 0 --cate concursuri a castigat
+                                THEN ('a castigat ' || COUNT(DISTINCT c.cod_concurs) || ' concursuri') --Punem distinct pt ca daca a participat la mai multe concursuri se va multiplica informatia
+                            WHEN COUNT(p.cod_concurs) > 0
+                                THEN ('nu a castigat nimic dar a participat la ' || COUNT(p.cod_concurs) || ' concursuri')
+                            ELSE 'nu a participat la concursuri'
+                        END) AS situatie_beneficiar
+                FROM beneficiar b, participa p, castiguri c
+                WHERE b.cod_beneficiar = p.cod_beneficiar(+) AND p.cod_beneficiar = c.cod_beneficiar(+)
+                GROUP BY b.cod_beneficiar;
+                
+        BEGIN
+            --luam datele din view si le punem in tablou:
+            SELECT * 
+            BULK COLLECT INTO t_castiguri
+            FROM castiguri;
+            
+            FOR i IN t_castiguri.FIRST..t_castiguri.LAST LOOP
+                DBMS_OUTPUT.PUT_LINE('Beneficiarul ' || t_castiguri(i).cod_beneficiar || ' a castigat premiul ' || t_castiguri(i).cod_premiu
+                || ' din cadrul concursului ' || t_castiguri(i).cod_concurs || ', obtinand ' || t_castiguri(i).punctaj_obtinut_concurs || ' puncte');
+                DBMS_OUTPUT.PUT_LINE('Premiul are punctajul minim necesar ' || t_castiguri(i).punctaj_cerut_de_premiu ||
+                ' si are rangul ' || t_castiguri(i).rang_premiu_in_concurs);
+            END LOOP;
+            
+            --Aflam cate premii s-au castigat in total folosindu ne de view
+            SELECT COUNT(*)
+            INTO v_nr_premii_castigate
+            FROM castiguri;
+        
+            --aflam cel mai scump premiu 
+            SELECT MAX(suma_bani + pret_produs_castigat)
+            INTO v_suma_maxima
+            FROM castiguri;
+            
+            --aflam beneficiarii care l-au castigat:
+            SELECT cod_beneficiar
+            BULK COLLECT INTO t_coduri
+            FROM castiguri
+            WHERE suma_bani + pret_produs_castigat = v_suma_maxima;
+            
+            FOR i IN c_situatie_beneficiari LOOP --afisam datele din cursor
+                EXIT WHEN c_situatie_beneficiari%NOTFOUND;
+                DBMS_OUTPUT.PUT_LINE('Beneficiarul ' || i.cod_beneficiar || i.situatie_beneficiar || ' ');
+            END LOOP;
+        
+        
+        RETURN v_nr_premii_castigate;
+        END premii_14;
+
+
+--Prima procedura================================================================================================================
+--Sa se creasca cu un anume procent pretul articolelor care au cel putin o recenzie printre primele 2 cele mai mari note distincte
+--Si cu alt procent daca e pe locurile 3-5.
+--Procentul va fi dat ca parametru
+
+    PROCEDURE recenzii_14(v_procent1 IN number, v_procent2 IN number)
+    IS
+        CURSOR c_recenzii_bune IS --articolele carora trebuie sa li se creasca pretul si cu cat(in functie de recenzii)
+            WITH note_ordonate AS --luam primele 5 note distincte
+                (SELECT note.nota, rownum indice
+                FROM
+                    (SELECT DISTINCT nota
+                    FROM recenzie r
+                    ORDER BY nota DESC) note
+                WHERE rownum <= 5)
+                
+            SELECT a.cod_articol cod_articol, -- aflam care articole trebuie sa aiba pretul crescut si cu cat
+                (CASE 
+                    WHEN EXISTS (SELECT 1 --daca exista o recenzie a produsului care sa aiba nota in primele 2 inregistrari
+                                FROM recenzie r, note_ordonate n 
+                                WHERE r.cod_articol = a.cod_articol and r.nota = n.nota and n.indice <= 2)
+                        THEN v_procent1
+                    WHEN EXISTS (SELECT 1 
+                                FROM recenzie r, note_ordonate n 
+                                WHERE r.cod_articol = a.cod_articol and r.nota = n.nota and n.indice BETWEEN 3 AND 5)
+                        THEN v_procent2
+                END) as procent_crestere
+            FROM articol a
+            WHERE EXISTS (SELECT 1 --ca sa nu afiseze si articole fara recenzii bune
+                        FROM recenzie r, note_ordonate n 
+                        WHERE r.cod_articol = a.cod_articol and r.nota = n.nota);
+           
+        v_pret_initial number(8, 2);
+        v_pret_final number(8, 2); 
+        v_cod_recenzie int;
+        v_nota number(2);
+    BEGIN
+   
+        FOR i IN c_recenzii_bune LOOP
+            EXIT WHEN c_recenzii_bune%NOTFOUND;
+            
+            DBMS_OUTPUT.PUT_LINE('Articolul ' || i.cod_articol || ' va avea pretul mai mare cu ' || i.procent_crestere || '%');
+            SELECT pret
+            INTO v_pret_initial
+            FROM articol
+            WHERE cod_articol = i.cod_articol;
+            
+            v_pret_final := v_pret_initial * (1 + i.procent_crestere / 100);
+            DBMS_OUTPUT.PUT_LINE('    Pret initial: ' || v_pret_initial || ', pret final: ' || v_pret_final);
+            UPDATE articol
+            SET pret = v_pret_final
+            WHERE cod_articol = i.cod_articol;
+            
+            --afisam pentru articolul curent una din recenziile cu nota cea mai mare
+            SELECT cod_recenzie, nota
+            INTO v_cod_recenzie, v_nota
+            FROM recenzie 
+            WHERE cod_articol = i.cod_articol
+                AND nota = (SELECT MAX(nota) -- vedem daca nota e egala cu nota maxima a recenziilor articolului
+                            FROM recenzie 
+                            WHERE cod_articol = i.cod_articol)
+                AND ROWNUM = 1; ---luam doar prima inregistrare generata
+            
+            DBMS_OUTPUT.PUT_LINE('    Una dintre recenziile cu nota cea mai mare pentru articol este ' || v_cod_recenzie || 
+            ' cu nota ' || v_nota);
+        END LOOP;
+    END recenzii_14;
+    
+    
+--A doua procedura=========================================================================================================
+--Sa se afle articolele comandate de cel putin n persoane diferite. N este dat ca parametru
+--Pentru aceste produse sa se afle exact cate persoane le au comandat, cate bucati au fost in total (o persoana poate cumpara mai multe)
+--si sediile diferite din care a plecat/va pleca cel putin un colet care contin acel articol
+--de asemenea, si curierii care au livrat cel putin un astfel de colet.
+
+    PROCEDURE articole_comandate_14(v_nr_persoane IN number)
+    IS
+        v_gasit boolean;
+        
+        CURSOR c_articole IS --retinem pt fiecare articol cumparat de minim n persoane cate persoane l au cumparat, si cate bucati au fost in total
+            WITH beneficiar_articol AS (
+                SELECT b.cod_beneficiar cod_beneficiar, aic.cod_articol cod_articol, --aflam mai intai cat din fiecare articol a comandat cineva in total(din mai multe comenzi sau pachete)
+                    SUM(aic.cantitate) as cantitate
+                FROM beneficiar b, detalii_tranzactie dt, comanda c, colet cc, articol_in_colet aic
+                WHERE b.cod_beneficiar = dt.cod_beneficiar AND dt.cod_detalii_tranzactie = c.cod_detalii_tranzactie
+                    AND c.cod_comanda = cc.cod_comanda AND cc.cod_colet = aic.cod_colet 
+                    AND cc.cod_comanda = aic.cod_comanda
+                GROUP BY b.cod_beneficiar, aic.cod_articol)
+                
+            SELECT ba.cod_articol as cod_articol, COUNT(ba.cod_beneficiar) as nr_persoane_distincte, 
+                SUM(cantitate) as cantitate_totala
+            FROM beneficiar_articol ba
+            GROUP BY ba.cod_articol
+            HAVING COUNT(ba.cod_beneficiar) >= v_nr_persoane; --iau linia doar daca articolul a fost cumparat de minim n pers
+            
+    BEGIN
+       FOR i IN c_articole LOOP
+            --EXIT WHEN c_articole%NOTFOUND;
+            DBMS_OUTPUT.PUT_LINE('Articolul ' || i.cod_articol || ' a fost comandat de ' || i.nr_persoane_distincte || ' persoane diferite in cantitatea totala de '
+            || i.cantitate_totala || ' bucati. Sediile din care pleaca cel putin un colet care contine articolul sunt: ');
+            DBMS_OUTPUT.PUT('     ');
+            
+            --aflam sediile din care pleaca cel putin un colet cu articolul curent:
+            FOR j IN (SELECT s.cod_sediu
+                FROM sediu s
+                WHERE EXISTS (SELECT 1  --sediile unde exista cel putin un colet care contine articolul
+                            FROM colet c, articol_in_colet aic
+                            WHERE c.cod_colet = aic.cod_colet and c.cod_comanda = aic.cod_comanda
+                                and aic.cod_articol = i.cod_articol and c.cod_sediu = s.cod_sediu)
+            ) 
+                LOOP
+                
+                    DBMS_OUTPUT.PUT(j.cod_sediu || ' ');
+                    
+                END LOOP;
+                
+            DBMS_OUTPUT.PUT_LINE('');
+            DBMS_OUTPUT.PUT('Curierii care livreaza cel putin un astfel de colet sunt: ');
+            
+            --gasim curierii care au livrat/vor livra cel putin un astfel de colet (calculam separat de sedii pt ca dintr un sediu pot pleca mai multe colete
+            v_gasit := FALSE; -- pentru a afisa dupa un mesaj specific daca nu gasim curier(e posibil sa fie colete care nu au fost asignate unui curier) 
+            FOR j IN (SELECT cr.cod_angajat as cod_curier
+                FROM curier cr
+                WHERE EXISTS (SELECT 1  --curierii care livreaza cel putin un colet care contine articolul
+                            FROM colet c, articol_in_colet aic
+                            WHERE c.cod_colet = aic.cod_colet and c.cod_comanda = aic.cod_comanda
+                                and aic.cod_articol = i.cod_articol and c.cod_angajat = cr.cod_angajat)
+            ) 
+                LOOP
+                
+                    DBMS_OUTPUT.PUT(j.cod_curier || ' ');
+                    v_gasit := TRUE; --am gasit cel putin un curier
+                    
+                END LOOP;
+            
+            IF v_gasit = FALSE
+            THEN DBMS_OUTPUT.PUT('Niciun colet nu a fost repartizat inca la un curier');
+            END IF;
+            
+            DBMS_OUTPUT.PUT_LINE('');
+            
+       END LOOP;
+       
+    END articole_comandate_14;
+    
+    
+--A doua functie ===================================================================================
+--Pentru un cod_sediu dat, sa se compare pt toate pachetele pretul lor cu suma preturilor produselor componente.
+--Daca vreun articol nu se gaseste in sediu se va lua pretul universal, din tabela articol.
+--Sa se afle de asemenea pentru fiecare pachet cate produse comune are cu fiecare pachet.
+--Sa se afle pachetul cu cea mai mare diferenta intre pretul lui si suma preturilor produselor componente.
+--Functia va avea parametru out cu codul acestui pachet, si va returna diferenta maxima
+    
+    FUNCTION comparatie_pachet_produs_14 (v_cod_sediu IN sediu.cod_sediu%TYPE, v_cod_pachet OUT pachet_promotional.cod_articol%TYPE) 
+    RETURN number
+    IS
+   
+
+        v_diferenta_maxima number(10):= 0;
+        v_diferenta_curenta number(10); --pentru a calcula diferenta maxima
+        
+        CURSOR c_pachet_produse IS--cursor care retine pt fiecare pachet pretul lui si pretul adunat al produselor componente cu preturi din sediul parametru
+            WITH preturi_pachete AS --mai intai retinem doar pachetele si pretul lor
+                (SELECT pp.cod_articol cod_pachet,
+                    (SELECT NVL(ais.pret, a2.pret) -- daca nu gasim stocsul in sediu luam pretul din tabela articol
+                    FROM articol a2, articol_in_sediu ais
+                    WHERE pp.cod_articol = a2.cod_articol and a2.cod_articol = ais.cod_articol(+) -- e posibil sa nu se gaseasca in sediu stocul
+                        and ais.cod_sediu(+) = v_cod_sediu)  
+                    as pret_pachet
+                FROM pachet_promotional pp)
+
+            SELECT pp.cod_pachet as cod_pachet, pp.pret_pachet as pret_pachet, 
+                SUM (NVL(ais.pret, a.pret)) as suma_preturi_produse
+            FROM preturi_pachete pp, produs_in_pachet pip, articol a, articol_in_sediu ais--pentru fiecare produs al pachetului trb sa vedem daca e in stoc
+            WHERE pp.cod_pachet = pip.cod_pachet and pip.cod_produs = a.cod_articol and a.cod_articol = ais.cod_articol(+)
+                and ais.cod_sediu(+) = v_cod_sediu --trb sa fie din sediul parametru
+            GROUP BY pp.cod_pachet, pp.pret_pachet;
+            
+        CURSOR c_produse_comune IS --aflam pt fiecare pachet cate produse comune are cu celelalte
+            --facem produs cartezian intre 2 pachete si produsele lor si luam inregistrarile unde corespund cele 2 produse componente
+            SELECT pp1.cod_articol cod_pachet1, pp2.cod_articol cod_pachet2,
+                COUNT(pip1.cod_produs) nr_produse_comune
+            FROM pachet_promotional pp1, produs_in_pachet pip1, pachet_promotional pp2, produs_in_pachet pip2
+            WHERE pp1.cod_articol = pip1.cod_pachet and pp2.cod_articol = pip2.cod_pachet
+                and pp1.cod_articol < pp2.cod_articol and pip1.cod_produs = pip2.cod_produs -- semnul < pt a afisa doar o data perechea
+            GROUP BY pp1.cod_articol, pp2.cod_articol;
+            
+    BEGIN
+
+        --vom parcurge ciclu cursorul, afisam rezultatele si calculam diferenta maxima
+        FOR i IN c_pachet_produse LOOP
+        
+            EXIT WHEN c_pachet_produse%NOTFOUND;
+            v_diferenta_curenta := ABS(i.pret_pachet - i.suma_preturi_produse);
+            
+            DBMS_OUTPUT.PUT_LINE('Pachetul promotional ' || i.cod_pachet || ' are pretul ' || i.pret_pachet ||
+                ' si suma preturilor produselor ' || i.suma_preturi_produse || ', diferenta fiind ' || v_diferenta_curenta);
+            
+            IF v_diferenta_curenta > v_diferenta_maxima 
+            THEN v_diferenta_maxima := v_diferenta_curenta;
+                v_cod_pachet := i.cod_pachet;
+            END IF;
+            
+        END LOOP;
+        
+        --afisam produsele comune:
+        FOR i IN c_produse_comune LOOP
+            DBMS_OUTPUT.PUT_LINE('Pachetul ' || i.cod_pachet1 || ' are ' || i.nr_produse_comune || ' produs(e) comun(e) cu pachetul ' || i.cod_pachet2);
+        END LOOP;
+        
+    RETURN v_diferenta_maxima;
+    END comparatie_pachet_produs_14;
+     
+END exercitiul14;
+/
+
+--A doua functie:
+----PACHET_PRODUS
+truncate table articol_in_sediu; --stergem ce e in sediu pentru a demonstra ca se va lua pretul universal in acest caz
+DECLARE
+    v_diferenta_maxima number(10);
+    v_cod_pachet int;
+BEGIN
+    v_diferenta_maxima := exercitiul14.comparatie_pachet_produs_14(100, v_cod_pachet);
+    DBMS_OUTPUT.PUT_LINE('Diferenta maxima pret pachet <=> suma preturi produse este ' || v_diferenta_maxima || ' RON.');
+    DBMS_OUTPUT.PUT_LINE('Pachetul promotional cu aceasta diferenta maxima este ' || v_cod_pachet);
+    
+END;
+/
+--A doua procedura:
+--ARTICOLE COMANDATE:
+BEGIN
+    exercitiul14.articole_comandate_14(2);
+END;
+/
+rollback;
+--Prima procedura:
+--RECENZII
+--preturile inainte:
+select * from articol;
+DECLARE
+    v_procent1 number(3);
+    v_procent2 number(3);
+BEGIN
+    exercitiul14.recenzii_14(20, 10);
+END;
+/
+--Prima functie:
+--PREMII 
+DECLARE
+    v_suma_maxima number(10);
+    t_coduri exercitiul14.tablou_indexat_coduri;
+    v_numar_castiguri number(8);
+BEGIN
+--inseram o inregistrare pentru a avea un caz in care un beneficiar a participat dar nu a castigat nimic.
+    --insert into participa (cod_concurs, cod_beneficiar, punctaj) values (100, 150, 20);
+    
+    v_numar_castiguri := exercitiul14.premii_14(v_suma_maxima, t_coduri);
+    DBMS_OUTPUT.PUT_LINE('In total au fost ' || v_numar_castiguri || ' premii castigate ');
+    
+    DBMS_OUTPUT.PUT_LINE('Cel mai scump premiu are valoarea de ' || v_suma_maxima || ' si a fost castigat de beneficiarii cu codurile: ');
+    FOR i IN t_coduri.FIRST..t_coduri.LAST LOOP
+        DBMS_OUTPUT.PUT_LINE('     ' || t_coduri(i));
+    END LOOP;
+    
+    delete from participa where cod_concurs = 100 and cod_beneficiar = 150;
+END;
+/
+
+
+
+
+
+
+
+
+
+
